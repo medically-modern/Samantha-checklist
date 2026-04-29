@@ -19,7 +19,7 @@ import { EMPTY_INSURANCE, deriveInsuranceOutcome } from "./workflow";
  * Push every relevant column for a patient to Monday in one batch.
  * Resolves once all writes succeed; rejects on the first failure.
  */
-export async function sendPatientToMonday(p: Patient): Promise<void> {
+export async function sendPatientToMonday(p: Patient, context: "benefits" | "submitAuth" | "authOutstanding" = "benefits"): Promise<void> {
   const ins = p.insurance ?? EMPTY_INSURANCE;
   const tasks: Promise<unknown>[] = [];
 
@@ -58,7 +58,12 @@ export async function sendPatientToMonday(p: Patient): Promise<void> {
     const productId = PRODUCT_CODE_TO_PRODUCT_ID[cid];
     const authColumnId = COL.authResult[productId];
     if (state.auth === "required") {
-      tasks.push(writeStatusIndex(p.id, authColumnId, AUTH_RESULT_INDEX.required));
+      // When sending from Submit Auth tab, flip auth result to "Submitted"
+      if (context === "submitAuth") {
+        tasks.push(writeStatusIndex(p.id, authColumnId, AUTH_RESULT_INDEX.submitted));
+      } else {
+        tasks.push(writeStatusIndex(p.id, authColumnId, AUTH_RESULT_INDEX.required));
+      }
     } else if (state.auth === "not-required") {
       tasks.push(writeStatusIndex(p.id, authColumnId, AUTH_RESULT_INDEX.noAuthNeeded));
     }
@@ -102,16 +107,25 @@ export async function sendPatientToMonday(p: Patient): Promise<void> {
   }
 
   // ----- Escalation + Stage Advancer -----
-  const outcome = deriveInsuranceOutcome(ins);
-  if (outcome === "blocker") {
-    tasks.push(writeStatusIndex(p.id, COL.escalation, ESCALATION_INDEX.required));
-    tasks.push(writeStatusIndex(p.id, COL.stageAdvancer, STAGE_INDEX.stuck));
-  } else if (outcome === "all-clear") {
-    tasks.push(writeStatusIndex(p.id, COL.stageAdvancer, STAGE_INDEX.complete));
-  } else if (outcome === "auth-required") {
+  if (context === "submitAuth") {
+    // Submit Auth tab always sets stage to Submit Auth
     tasks.push(writeStatusIndex(p.id, COL.stageAdvancer, STAGE_INDEX.authorization));
+  } else if (context === "authOutstanding") {
+    // Auth Outstanding tab sets stage to Auth Outstanding
+    tasks.push(writeStatusIndex(p.id, COL.stageAdvancer, STAGE_INDEX.authOutstanding));
   } else {
-    tasks.push(writeStatusIndex(p.id, COL.stageAdvancer, STAGE_INDEX.benefitsSos));
+    // Benefits tab uses derived outcome
+    const outcome = deriveInsuranceOutcome(ins);
+    if (outcome === "blocker") {
+      tasks.push(writeStatusIndex(p.id, COL.escalation, ESCALATION_INDEX.required));
+      tasks.push(writeStatusIndex(p.id, COL.stageAdvancer, STAGE_INDEX.stuck));
+    } else if (outcome === "all-clear") {
+      tasks.push(writeStatusIndex(p.id, COL.stageAdvancer, STAGE_INDEX.complete));
+    } else if (outcome === "auth-required") {
+      tasks.push(writeStatusIndex(p.id, COL.stageAdvancer, STAGE_INDEX.authorization));
+    } else {
+      tasks.push(writeStatusIndex(p.id, COL.stageAdvancer, STAGE_INDEX.benefitsSos));
+    }
   }
 
 

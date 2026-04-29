@@ -74,8 +74,11 @@ const Index = () => {
 
   const handleSend = async () => {
     if (!selected) return;
+    const context = mainTab === "authorizations" ? "submitAuth" as const
+      : mainTab === "authOutstanding" ? "authOutstanding" as const
+      : "benefits" as const;
     try {
-      await sendPatientToMonday(selected);
+      await sendPatientToMonday(selected, context);
       toast.success("Sent to Monday");
     } catch (e) {
       toast.error("Send to Monday failed", { description: e instanceof Error ? e.message : String(e) });
