@@ -56,6 +56,22 @@ export const READ_COLUMN_IDS = [
   COL.callReferenceNotes,
 ];
 
+/** Extended read columns for auth groups — includes auth results + universal statuses */
+export const AUTH_READ_COLUMN_IDS = [
+  ...READ_COLUMN_IDS,
+  COL.activeNetwork,
+  COL.dmeBenefits,
+  COL.sos,
+  COL.auth,
+  COL.authResult.monitor,
+  COL.authResult.sensors,
+  COL.authResult.insulin_pump,
+  COL.authResult.infusion_set,
+  COL.authResult.cartridge,
+];
+
+const AUTH_GROUP_IDS = new Set([GROUPS.submitAuth, GROUPS.authOutstanding]);
+
 export interface MondayColumnValue {
   id: string;
   text: string | null;
@@ -115,9 +131,10 @@ export async function fetchGroupItems(groupId: string = GROUPS.benefits): Promis
       }
     }
   `;
+  const cols = AUTH_GROUP_IDS.has(groupId) ? AUTH_READ_COLUMN_IDS : READ_COLUMN_IDS;
   const data = await gql<{ boards: { items_page: { items: MondayItem[] } }[] }>(query, {
     boardId: BOARD_ID,
-    cols: READ_COLUMN_IDS,
+    cols,
   });
   return data.boards?.[0]?.items_page?.items ?? [];
 }

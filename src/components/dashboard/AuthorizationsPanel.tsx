@@ -6,7 +6,6 @@ import {
   EMPTY_INSURANCE,
   AUTH_SUBMISSION_METHODS,
   AuthSubmissionMethod,
-  AuthChoice,
 } from "@/lib/workflow";
 import {
   resolveHcpcs,
@@ -68,7 +67,6 @@ export function AuthorizationsPanel({ patient, onCodeChange }: Props) {
         <AuthRequirementsMatrix
           resolved={resolved}
           ins={ins}
-          onCodeChange={onCodeChange}
         />
       )}
 
@@ -354,11 +352,9 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
 function AuthRequirementsMatrix({
   resolved,
   ins,
-  onCodeChange,
 }: {
   resolved: ResolvedProduct[];
   ins: { codes: Partial<Record<ProductCodeId, ProductCodeState>> };
-  onCodeChange: (codeId: ProductCodeId, patch: Partial<ProductCodeState>) => void;
 }) {
   // Show all 5 products, in canonical order
   const ALL: ProductId[] = ["monitor", "sensors", "insulin_pump", "infusion_set", "cartridge"];
@@ -371,10 +367,9 @@ function AuthRequirementsMatrix({
           <ShieldCheck className="h-4 w-4 text-muted-foreground" />
         </div>
         <div className="min-w-0">
-          <h3 className="text-sm font-semibold">Auth Requirements</h3>
+          <h3 className="text-sm font-semibold">Auth Status from Monday</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Mark each product Required or Not Required. Required products appear below to track
-            submission and approval.
+            Read-only — these values are pulled directly from the Monday board.
           </p>
         </div>
       </div>
@@ -384,48 +379,37 @@ function AuthRequirementsMatrix({
           const codeId = PRODUCT_TO_CODE_ID[p];
           const isServed = servedSet.has(p);
           const state = ins.codes[codeId];
-          const auth: AuthChoice = state?.auth ?? "";
+          const label = state?._mondayAuthLabel || "";
+          const isNotServing = label.toLowerCase() === "not serving";
+          const isRequired = label.toLowerCase() === "required";
+          const isNoAuth = label.toLowerCase() === "no auth needed";
 
           return (
             <div
               key={p}
               className={cn(
                 "rounded-lg border p-3 bg-background flex flex-col gap-2",
-                !isServed && "opacity-60",
-                auth === "required" && "border-warning/50 bg-warning/5",
-                auth === "not-required" && "border-success/40 bg-success/5",
+                isNotServing && "opacity-60",
+                isRequired && "border-warning/50 bg-warning/5",
+                isNoAuth && "border-success/40 bg-success/5",
               )}
             >
               <div>
                 <p className="text-sm font-semibold leading-tight">{PRODUCT_LABELS[p]}</p>
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-0.5">
-                  {isServed ? "Serving" : "Not Serving"}
+                  {isServed && !isNotServing ? "Serving" : "Not Serving"}
                 </p>
               </div>
-              <Select
-                value={auth || "__none__"}
-                onValueChange={(v) =>
-                  onCodeChange(codeId, {
-                    auth: (v === "__none__" ? "" : v) as AuthChoice,
-                  })
-                }
-                disabled={!isServed}
+              <div
+                className={cn(
+                  "mt-auto h-9 flex items-center px-3 rounded-md border text-sm font-medium bg-muted",
+                  isRequired && "bg-warning/15 border-warning/50 text-warning-foreground",
+                  isNoAuth && "bg-success/10 border-success/40 text-success",
+                  isNotServing && "text-muted-foreground",
+                )}
               >
-                <SelectTrigger
-                  className={cn(
-                    "mt-auto h-9 text-sm font-medium",
-                    auth === "required" && "bg-warning/15 border-warning/50 text-warning-foreground",
-                    auth === "not-required" && "bg-success/10 border-success/40 text-success",
-                  )}
-                >
-                  <SelectValue placeholder="Select…" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">— Not selected —</SelectItem>
-                  <SelectItem value="not-required">Not Required</SelectItem>
-                  <SelectItem value="required">Required</SelectItem>
-                </SelectContent>
-              </Select>
+                {label || "—"}
+              </div>
             </div>
           );
         })}

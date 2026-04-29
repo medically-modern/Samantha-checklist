@@ -324,6 +324,8 @@ export interface ProductCodeState {
   authEnd?: string;   // YYYY-MM-DD
   authUnits?: string;
   intakeId?: string; // Carecentrix Portal only
+  /** Original Monday auth result label — populated when reading from auth groups, used for read-only display */
+  _mondayAuthLabel?: string;
 }
 
 export type UniversalChoice = "" | "confirmed" | "not-confirmed";
