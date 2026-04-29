@@ -13,7 +13,6 @@ import {
 } from "@/lib/workflow";
 import {
   resolveHcpcs,
-  SERVING_OPTIONS,
   PRODUCT_LABELS,
   type PrimaryInsurance,
   type Serving,
@@ -21,7 +20,7 @@ import {
   type ResolvedProduct,
 } from "@/lib/hcpcRules";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertTriangle, CheckCircle2, Clock, ShieldCheck, ShieldAlert, Repeat, Package, XCircle } from "lucide-react";
@@ -31,8 +30,6 @@ interface Props {
   patient: Patient;
   onUniversalChange: (id: string, value: UniversalChoice) => void;
   onCodeChange: (codeId: ProductCodeId, patch: Partial<ProductCodeState>) => void;
-  onServingChange: (v: Serving) => void;
-  onPrimaryInsuranceChange: (v: PrimaryInsurance) => void;
   onNotesChange: (v: string) => void;
 }
 
@@ -45,20 +42,10 @@ const PRODUCT_TO_CODE_ID: Record<ProductId, ProductCodeId> = {
   cartridge: "cartridges",
 };
 
-const INSURANCE_GROUPS: { label: string; options: PrimaryInsurance[] }[] = [
-  { label: "Fidelis", options: ["Fidelis Medicaid", "Fidelis Low-Cost", "Fidelis Commercial", "Fidelis Medicare"] },
-  { label: "Anthem BCBS", options: ["Anthem BCBS Medicare", "Anthem BCBS Commercial", "Anthem BCBS Medicaid (JLJ)", "Anthem BCBS Low-Cost (JLJ)", "Horizon BCBS", "BCBS TN", "BCBS FL", "BCBS WY"] },
-  { label: "United", options: ["United Medicare", "United Medicaid", "United Commercial", "United Low-Cost"] },
-  { label: "Aetna", options: ["Aetna Medicare", "Aetna Commercial"] },
-  { label: "Other", options: ["Medicare A&B", "Medicaid", "NYSHIP", "Cigna", "Humana", "Wellcare", "Midlands Choice", "MagnaCare", "UMR", "Oregon Care"] },
-];
-
 export function InsurancePanel({
   patient,
   onUniversalChange,
   onCodeChange,
-  onServingChange,
-  onPrimaryInsuranceChange,
   onNotesChange,
 }: Props) {
   const ins = patient.insurance ?? EMPTY_INSURANCE;
@@ -82,50 +69,29 @@ export function InsurancePanel({
         </div>
       </div>
 
-      {/* STEP 1 — Patient context */}
+      {/* STEP 1 — Patient context (read-only from Monday) */}
       <StepSection
         number={1}
-        title="Enter patient context"
-        subtitle="Select what's being served and the primary insurance to load the right codes."
+        title="Patient context"
+        subtitle="Serving and insurance pulled from Monday — not editable here."
         complete={dropdownsReady}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
             <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Serving <span className="text-escalate">*</span>
+              Serving
             </label>
-            <Select value={serving || "__none__"} onValueChange={(v) => onServingChange((v === "__none__" ? "" : v) as Serving)}>
-              <SelectTrigger className="mt-1 h-9 bg-background">
-                <SelectValue placeholder="Select serving…" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">— Not selected —</SelectItem>
-                {SERVING_OPTIONS.map((opt) => (
-                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="mt-1 h-9 flex items-center px-3 rounded-md border bg-muted text-sm">
+              {serving || <span className="text-muted-foreground">—</span>}
+            </div>
           </div>
           <div>
             <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Primary Insurance <span className="text-escalate">*</span>
+              Primary Insurance
             </label>
-            <Select value={primaryInsurance || "__none__"} onValueChange={(v) => onPrimaryInsuranceChange((v === "__none__" ? "" : v) as PrimaryInsurance)}>
-              <SelectTrigger className="mt-1 h-9 bg-background">
-                <SelectValue placeholder="Select primary insurance…" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">— Not selected —</SelectItem>
-                {INSURANCE_GROUPS.map((g) => (
-                  <SelectGroup key={g.label}>
-                    <SelectLabel>{g.label}</SelectLabel>
-                    {g.options.map((opt) => (
-                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                    ))}
-                  </SelectGroup>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="mt-1 h-9 flex items-center px-3 rounded-md border bg-muted text-sm">
+              {primaryInsurance || <span className="text-muted-foreground">—</span>}
+            </div>
           </div>
         </div>
       </StepSection>

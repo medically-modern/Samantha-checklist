@@ -7,7 +7,6 @@ import {
   EMPTY_INSURANCE,
   UniversalChoice,
 } from "@/lib/workflow";
-import { type Serving, type PrimaryInsurance } from "@/lib/hcpcRules";
 import { InsurancePanel } from "@/components/dashboard/InsurancePanel";
 import { AuthorizationsPanel } from "@/components/dashboard/AuthorizationsPanel";
 import { PatientsSidebar } from "@/components/dashboard/PatientsSidebar";
@@ -70,26 +69,6 @@ const Index = () => {
     const nextCode = { ...prev, ...patch };
     const next = { ...ins, codes: { ...ins.codes, [codeId]: nextCode } };
     update(selected.id, { insurance: next });
-  };
-
-  const resetCodeStatuses = (ins = selected?.insurance ?? EMPTY_INSURANCE) => {
-    const codes: typeof ins.codes = {};
-    for (const [k, v] of Object.entries(ins.codes)) {
-      if (v) codes[k as ProductCodeId] = { ...v, status: "pending", authSubmittedAt: undefined, authApprovedAt: undefined };
-    }
-    return { ...ins, codes };
-  };
-
-  const setServing = (v: Serving) => {
-    if (!selected) return;
-    const ins = resetCodeStatuses();
-    update(selected.id, { serving: v, insurance: ins });
-  };
-
-  const setPrimaryInsurance = (v: PrimaryInsurance) => {
-    if (!selected) return;
-    const ins = resetCodeStatuses();
-    update(selected.id, { primaryInsurance: v, insurance: ins });
   };
 
   const resetForNewPatient = () => {
@@ -186,8 +165,6 @@ const Index = () => {
                       patient={selected}
                       onUniversalChange={onUniversalChange}
                       onCodeChange={updateCode}
-                      onServingChange={setServing}
-                      onPrimaryInsuranceChange={setPrimaryInsurance}
                       onNotesChange={(v) => update(selected.id, { notes: v })}
                     />
 
