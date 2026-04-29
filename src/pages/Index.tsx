@@ -129,7 +129,7 @@ const Index = () => {
           showGroupTabs={mainTab === "authorizations"}
         />
 
-        <div className="flex-1 flex flex-col min-w-0">
+        <Tabs value={mainTab} onValueChange={handleMainTabChange} className="flex-1 flex flex-col min-w-0">
           <header className="bg-gradient-navy text-navy-foreground border-b border-sidebar-border">
             <div className="px-6 py-5 flex items-center justify-between gap-4 flex-wrap">
               <div className="flex items-center gap-3">
@@ -156,6 +156,13 @@ const Index = () => {
             </div>
           </header>
 
+          <div className="flex justify-center py-3 border-b bg-background">
+            <TabsList className="grid w-full max-w-md grid-cols-2">
+              <TabsTrigger value="benefits">Benefits</TabsTrigger>
+              <TabsTrigger value="authorizations">Authorizations</TabsTrigger>
+            </TabsList>
+          </div>
+
           <main className="flex-1 px-6 py-6">
             <section className="max-w-5xl mx-auto space-y-5">
               {!selected && (
@@ -171,12 +178,7 @@ const Index = () => {
               )}
 
               {selected && (
-                <Tabs value={mainTab} onValueChange={handleMainTabChange} className="space-y-5">
-                  <TabsList className="grid w-full max-w-md grid-cols-2">
-                    <TabsTrigger value="benefits">Benefits</TabsTrigger>
-                    <TabsTrigger value="authorizations">Authorizations</TabsTrigger>
-                  </TabsList>
-
+                <>
                   <TabsContent value="benefits" className="space-y-5 mt-0">
                     <PatientProfileCard patient={selected} />
 
@@ -209,11 +211,11 @@ const Index = () => {
 
                     <SendToMondayButton onSend={handleSend} disabled={!selected} />
                   </TabsContent>
-                </Tabs>
+                </>
               )}
             </section>
           </main>
-        </div>
+        </Tabs>
       </div>
     </SidebarProvider>
   );
