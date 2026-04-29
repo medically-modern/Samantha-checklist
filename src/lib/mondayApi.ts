@@ -83,9 +83,9 @@ export const COL = {
   },
   authUnits: {
     monitor: "numeric_mm2wjew6",
-    sensors: "numeric_mm2wxcjj",
-    insulin_pump: "numeric_mm2wd6a1",
-    infusion_set: "numeric_mm2w1df3",
+    sensors: "numeric_mm2wd6a1",
+    insulin_pump: "numeric_mm2wxcjj",
+    infusion_set: "numeric_mm2w2jhm",
     cartridge: "numeric_mm2w1df3",
   },
 } as const;
