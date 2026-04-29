@@ -374,6 +374,46 @@ export async function sendPatientToMonday(p: Patient, context: "benefits" | "sub
     });
   }
 
+
+  // ----- Per-product auth submission fields (Authorizations tab) -----
+  for (const { cid, state } of entries) {
+    if (!state) continue;
+    const productId = PRODUCT_CODE_TO_PRODUCT_ID[cid];
+
+    // Auth Submission Method (dropdown)
+    if (state.authSubmissionMethod) {
+      const optId = AUTH_METHOD_OPTION_ID[state.authSubmissionMethod];
+      if (optId !== undefined) {
+        tasks.push(writeDropdownIds(p.id, COL.authMethod[productId], [optId]));
+      }
+    }
+
+    // Auth Submission Date (text column)
+    if (state.authSubmissionDate) {
+      tasks.push(writeText(p.id, COL.authSubmissionDate[productId], state.authSubmissionDate));
+    }
+
+    // Auth ID (text column)
+    if (state.authId) {
+      tasks.push(writeText(p.id, COL.authId[productId], state.authId));
+    }
+
+    // Auth Start (date column)
+    if (state.authStart) {
+      tasks.push(writeDate(p.id, COL.authStart[productId], state.authStart));
+    }
+
+    // Auth End (date column)
+    if (state.authEnd) {
+      tasks.push(writeDate(p.id, COL.authEnd[productId], state.authEnd));
+    }
+
+    // Auth Units (numeric column)
+    if (state.authUnits) {
+      tasks.push(writeNumber(p.id, COL.authUnits[productId], state.authUnits));
+    }
+  }
+
   // ----- Notes (long text) -----
   if (typeof p.notes === "string") {
     tasks.push({
