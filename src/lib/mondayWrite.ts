@@ -1,10 +1,11 @@
 // Direct (non-debounced) batch writes to Monday for a single patient.
 // All edits are kept local until the user clicks "Send to Monday".
 
-import { writeStatusIndex, writeLongText, writeDropdownIds, COL } from "./mondayApi";
+import { writeStatusIndex, writeLongText, writeDropdownIds, writeText, writeDate, writeNumber, COL } from "./mondayApi";
 import { resolveHcpcs } from "./hcpcRules";
 import {
   AUTH_RESULT_INDEX,
+  AUTH_METHOD_OPTION_ID,
   ESCALATION_INDEX,
   NOT_CLEAR_PRODUCT_ID,
   PRODUCT_CODE_TO_PRODUCT_ID,
@@ -111,6 +112,46 @@ export async function sendPatientToMonday(p: Patient): Promise<void> {
     tasks.push(writeStatusIndex(p.id, COL.stageAdvancer, STAGE_INDEX.authorization));
   } else {
     tasks.push(writeStatusIndex(p.id, COL.stageAdvancer, STAGE_INDEX.benefitsSos));
+  }
+
+
+  // ----- Per-product auth submission fields (Authorizations tab) -----
+  for (const { cid, state } of entries) {
+    if (!state) continue;
+    const productId = PRODUCT_CODE_TO_PRODUCT_ID[cid];
+
+    // Auth Submission Method (dropdown)
+    if (state.authSubmissionMethod) {
+      const optId = AUTH_METHOD_OPTION_ID[state.authSubmissionMethod];
+      if (optId !== undefined) {
+        tasks.push(writeDropdownIds(p.id, COL.authMethod[productId], [optId]));
+      }
+    }
+
+    // Auth Submission Date (text column)
+    if (state.authSubmissionDate) {
+      tasks.push(writeText(p.id, COL.authSubmissionDate[productId], state.authSubmissionDate));
+    }
+
+    // Auth ID (text column)
+    if (state.authId) {
+      tasks.push(writeText(p.id, COL.authId[productId], state.authId));
+    }
+
+    // Auth Start (date column)
+    if (state.authStart) {
+      tasks.push(writeDate(p.id, COL.authStart[productId], state.authStart));
+    }
+
+    // Auth End (date column)
+    if (state.authEnd) {
+      tasks.push(writeDate(p.id, COL.authEnd[productId], state.authEnd));
+    }
+
+    // Auth Units (numeric column)
+    if (state.authUnits) {
+      tasks.push(writeNumber(p.id, COL.authUnits[productId], state.authUnits));
+    }
   }
 
   // ----- Notes (long text) -----

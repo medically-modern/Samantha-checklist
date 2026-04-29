@@ -18,15 +18,6 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { RotateCcw, Stethoscope } from "lucide-react";
 import { toast } from "sonner";
 import { sendPatientToMonday } from "@/lib/mondayWrite";
-import {
-  writeAuthMethod,
-  writeAuthSubmissionDate,
-  writeAuthId,
-  writeAuthStart,
-  writeAuthEnd,
-  writeAuthUnits,
-} from "@/lib/mondayAuthWrite";
-import type { AuthSubmissionMethod } from "@/lib/workflow";
 
 const Index = () => {
   const [mainTab, setMainTab] = useState<"benefits" | "authorizations">("benefits");
@@ -80,61 +71,6 @@ const Index = () => {
     update(selected.id, { insurance: next });
   };
 
-  // Auth tab: update local state AND fire-and-forget write to Monday per field
-  const updateCodeWithSync = (codeId: ProductCodeId, patch: Partial<ProductCodeState>) => {
-    updateCode(codeId, patch);
-    if (!selected) return;
-    const itemId = selected.id;
-
-    // Fire each changed field to Monday (errors surfaced via toast)
-    const syncField = async (fn: () => Promise<void>, label: string) => {
-      try {
-        await fn();
-      } catch (e) {
-        console.error(`Auth sync failed: ${label}`, e);
-        toast.error(`Failed to sync ${label}`, {
-          description: e instanceof Error ? e.message : String(e),
-        });
-      }
-    };
-
-    if (patch.authSubmissionMethod !== undefined) {
-      syncField(
-        () => writeAuthMethod(itemId, codeId, patch.authSubmissionMethod as AuthSubmissionMethod),
-        "Auth Method",
-      );
-    }
-    if (patch.authSubmissionDate !== undefined) {
-      syncField(
-        () => writeAuthSubmissionDate(itemId, codeId, patch.authSubmissionDate ?? ""),
-        "Submission Date",
-      );
-    }
-    if (patch.authId !== undefined) {
-      syncField(
-        () => writeAuthId(itemId, codeId, patch.authId ?? ""),
-        "Auth ID",
-      );
-    }
-    if (patch.authStart !== undefined) {
-      syncField(
-        () => writeAuthStart(itemId, codeId, patch.authStart ?? ""),
-        "Auth Start",
-      );
-    }
-    if (patch.authEnd !== undefined) {
-      syncField(
-        () => writeAuthEnd(itemId, codeId, patch.authEnd ?? ""),
-        "Auth End",
-      );
-    }
-    if (patch.authUnits !== undefined) {
-      syncField(
-        () => writeAuthUnits(itemId, codeId, patch.authUnits ?? ""),
-        "Auth Units",
-      );
-    }
-  };
 
   const resetForNewPatient = () => {
     if (!selected) return;
@@ -248,7 +184,7 @@ const Index = () => {
 
                     <AuthorizationsPanel
                       patient={selected}
-                      onCodeChange={updateCodeWithSync}
+                      onCodeChange={updateCode}
                     />
 
                     <SendToMondayButton onSend={handleSend} disabled={!selected} />
