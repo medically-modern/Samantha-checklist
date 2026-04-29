@@ -79,3 +79,32 @@ Push to `main` → GitHub Actions builds → deploys to GitHub Pages at:
 `https://medically-modern.github.io/Samantha-checklist/`
 
 The Monday API token must be set as a repository secret named `VITE_MONDAY_API_TOKEN`.
+
+## Rules & Configuration (for Brandon)
+
+The business rules live in two files. Everything else consumes their output — do not scatter rules into other files.
+
+### `src/lib/hcpcRules.ts` — Product & Insurance Rules
+This file answers: "Given a patient's insurance and serving type, what products do they get and what HCPC codes apply?"
+
+- **`SERVING_PRODUCTS`** — Maps each serving type (e.g. "Insulin Pump + CGM") to its list of active products. Edit this to change what products appear for each serving type.
+- **`SUPPLY_HCPC_GROUP_BY_PAYER`** — Maps each insurance to a supply code group (A, B, or C). Groups determine which infusion set / cartridge HCPC codes are used. Edit this when adding a new insurance or changing a payer's group.
+- **`SUPPLY_HCPC_GROUPS`** — Defines the actual HCPC codes for each group (A/B/C). Only edit if the codes themselves change.
+- **`SUPPLIES_ROUTE_TO_MEDICAID`** — Set of insurances where supplies bill to Medicaid instead of primary. Edit this when adding/removing a Medicaid-routing payer.
+- **`PRIMARY_INSURANCE_OPTIONS`** / **`SERVING_OPTIONS`** — The dropdown lists shown in the UI. Must stay in sync with Monday board dropdown labels.
+
+### `src/lib/mondayMapping.ts` — Status Index Mappings
+This file answers: "What number do I write to Monday for each status label?"
+
+- **`UNIVERSAL_INDEX`** — Indices for Active/Network, DME Benefits, SoS, Auth columns.
+- **`AUTH_RESULT_INDEX`** — Indices for the 5 per-product auth result columns (Evaluate, Auth Valid, Denied, No Auth Needed, Submitted, Required, Not Serving).
+- **`STAGE_INDEX`** — Stage Advancer indices.
+- **`ESCALATION_INDEX`** — Escalation column indices.
+- **`NOT_CLEAR_PRODUCT_ID`** — Dropdown option IDs for the "Not Clear Products" column.
+
+**If you add a new status label on the Monday board**, query the column's `settings_str` to find its index, then add it here. Never guess indices.
+
+### What NOT to edit for rule changes
+- `mondayApi.ts` — API plumbing, not rules
+- `mondayWrite.ts` — Reads from the mapping files above, doesn't contain rules
+- `workflow.ts` — Type definitions and outcome logic, not insurance/product rules
