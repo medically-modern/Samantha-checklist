@@ -36,6 +36,7 @@ export const COL = {
   notClearProducts: "dropdown_mm2vez5a",
 
   callReferenceNotes: "long_text_mm2ffsme",
+  carecentrixIntakeId: "text_mm2wnhx",
 
   // Per-product auth result columns
   authResult: {
