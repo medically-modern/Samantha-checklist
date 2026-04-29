@@ -45,6 +45,49 @@ export const COL = {
     infusion_set: "color_mm1xr2j1",
     cartridge: "color_mm1xybvt",
   },
+  // Per-product auth write columns (×5 products)
+  authMethod: {
+    monitor: "dropdown_mm2wmhx9",
+    sensors: "dropdown_mm2whrk7",
+    insulin_pump: "dropdown_mm2w2k6y",
+    infusion_set: "dropdown_mm2way9m",
+    cartridge: "dropdown_mm2wj9ws",
+  },
+  authId: {
+    monitor: "text_mm1w1d5p",
+    sensors: "text_mm1x8tdp",
+    insulin_pump: "text_mm1xmj8x",
+    infusion_set: "text_mm1xf6ht",
+    cartridge: "text_mm1xs6s8",
+  },
+  authSubmissionDate: {
+    monitor: "text_mm2wmc1z",
+    sensors: "text_mm2w85gd",
+    insulin_pump: "text_mm2w72r6",
+    infusion_set: "text_mm2wvnpx",
+    cartridge: "text_mm2wth7t",
+  },
+  authStart: {
+    monitor: "date_mm1wj1bz",
+    sensors: "date_mm1x929",
+    insulin_pump: "date_mm1xxbkz",
+    infusion_set: "date_mm1xrk1c",
+    cartridge: "date_mm1xp0vm",
+  },
+  authEnd: {
+    monitor: "date_mm1whebp",
+    sensors: "date_mm1xvnqb",
+    insulin_pump: "date_mm1x2q3",
+    infusion_set: "date_mm1xj3wp",
+    cartridge: "date_mm1xznf9",
+  },
+  authUnits: {
+    monitor: "numeric_mm2wjew6",
+    sensors: "numeric_mm2wxcjj",
+    insulin_pump: "numeric_mm2wd6a1",
+    infusion_set: "numeric_mm2w1df3",
+    cartridge: "numeric_mm2w1df3",
+  },
 } as const;
 
 export const READ_COLUMN_IDS = [
@@ -190,3 +233,54 @@ export async function writeDropdownIds(itemId: string, columnId: string, ids: nu
   });
 }
 
+/**
+ * Write a text column.
+ */
+export async function writeText(itemId: string, columnId: string, text: string): Promise<void> {
+  const query = `
+    mutation ($boardId: ID!, $itemId: ID!, $columnId: String!, $value: JSON!) {
+      change_column_value(board_id: $boardId, item_id: $itemId, column_id: $columnId, value: $value) { id }
+    }
+  `;
+  await gql(query, {
+    boardId: BOARD_ID,
+    itemId,
+    columnId,
+    value: JSON.stringify(text),
+  });
+}
+
+/**
+ * Write a date column. value should be YYYY-MM-DD or empty string to clear.
+ */
+export async function writeDate(itemId: string, columnId: string, date: string): Promise<void> {
+  const query = `
+    mutation ($boardId: ID!, $itemId: ID!, $columnId: String!, $value: JSON!) {
+      change_column_value(board_id: $boardId, item_id: $itemId, column_id: $columnId, value: $value) { id }
+    }
+  `;
+  const val = date ? { date } : {};
+  await gql(query, {
+    boardId: BOARD_ID,
+    itemId,
+    columnId,
+    value: JSON.stringify(val),
+  });
+}
+
+/**
+ * Write a numeric column.
+ */
+export async function writeNumber(itemId: string, columnId: string, num: string): Promise<void> {
+  const query = `
+    mutation ($boardId: ID!, $itemId: ID!, $columnId: String!, $value: JSON!) {
+      change_column_value(board_id: $boardId, item_id: $itemId, column_id: $columnId, value: $value) { id }
+    }
+  `;
+  await gql(query, {
+    boardId: BOARD_ID,
+    itemId,
+    columnId,
+    value: JSON.stringify(num || ""),
+  });
+}
