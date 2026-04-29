@@ -89,6 +89,9 @@ export const COL = {
     infusion_set: "numeric_mm2w2jhm",
     cartridge: "numeric_mm2w1df3",
   },
+
+  // Debug / error logging
+  joshDebug: "text_mm2w1qn4",
 } as const;
 
 export const READ_COLUMN_IDS = [
