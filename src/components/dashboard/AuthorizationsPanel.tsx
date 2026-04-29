@@ -15,7 +15,7 @@ import {
 } from "@/lib/hcpcRules";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Package, Repeat, Send, Inbox, ShieldCheck, Clock } from "lucide-react";
+import { Package, Repeat, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -144,199 +144,61 @@ function ProductAuthBlock({ meta, resolved, state, onChange }: BlockProps) {
         </span>
       </div>
 
-      {/* Two clearly separated step cards — sit on the muted wash so the gap reads as space between two workstations */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 bg-muted/20">
-
-        {/* STEP 1 — Submit Auth (do this first) */}
-        <StageBlock
-          stepNumber={1}
-          icon={<Send className="h-3.5 w-3.5" />}
-          title="Submit Auth"
-          subtitle="Do this first"
-          tone="active"
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {/* Submit Auth fields */}
+      <div className="p-4 bg-muted/20">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="sm:col-span-2">
+            <FieldLabel>Auth Submission Method</FieldLabel>
+            <Select
+              value={state.authSubmissionMethod || "__none__"}
+              onValueChange={(v) =>
+                onChange({
+                  authSubmissionMethod: (v === "__none__" ? "" : v) as AuthSubmissionMethod,
+                })
+              }
+            >
+              <SelectTrigger className="mt-1 h-9 bg-background font-medium">
+                <SelectValue placeholder="Select submission method…" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">— Not selected —</SelectItem>
+                {AUTH_SUBMISSION_METHODS.map((m) => (
+                  <SelectItem key={m} value={m}>{m}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <FieldLabel>Auth Submission Date</FieldLabel>
+            <Input
+              type="date"
+              value={state.authSubmissionDate ?? ""}
+              onChange={(e) => onChange({ authSubmissionDate: e.target.value })}
+              className="mt-1 h-9 bg-background"
+            />
+          </div>
+          <div>
+            <FieldLabel>Auth ID</FieldLabel>
+            <Input
+              value={state.authId ?? ""}
+              onChange={(e) => onChange({ authId: e.target.value })}
+              placeholder="e.g. AUTH-123456"
+              className="mt-1 h-9 bg-background font-mono text-sm"
+            />
+          </div>
+          {state.authSubmissionMethod === "Carecentrix Portal" && (
             <div className="sm:col-span-2">
-              <FieldLabel>Auth Submission Method</FieldLabel>
-              <Select
-                value={state.authSubmissionMethod || "__none__"}
-                onValueChange={(v) =>
-                  onChange({
-                    authSubmissionMethod: (v === "__none__" ? "" : v) as AuthSubmissionMethod,
-                  })
-                }
-              >
-                <SelectTrigger className="mt-1 h-9 bg-background font-medium">
-                  <SelectValue placeholder="Select submission method…" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">— Not selected —</SelectItem>
-                  {AUTH_SUBMISSION_METHODS.map((m) => (
-                    <SelectItem key={m} value={m}>{m}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <FieldLabel>Auth Submission Date</FieldLabel>
+              <FieldLabel>Intake ID · Carecentrix</FieldLabel>
               <Input
-                type="date"
-                value={state.authSubmissionDate ?? ""}
-                onChange={(e) => onChange({ authSubmissionDate: e.target.value })}
-                className="mt-1 h-9 bg-background"
-              />
-            </div>
-            <div>
-              <FieldLabel>Auth ID</FieldLabel>
-              <Input
-                value={state.authId ?? ""}
-                onChange={(e) => onChange({ authId: e.target.value })}
-                placeholder="e.g. AUTH-123456"
+                value={state.intakeId ?? ""}
+                onChange={(e) => onChange({ intakeId: e.target.value })}
+                placeholder="e.g. INTAKE-789"
                 className="mt-1 h-9 bg-background font-mono text-sm"
               />
             </div>
-            {state.authSubmissionMethod === "Carecentrix Portal" && (
-              <div className="sm:col-span-2">
-                <FieldLabel>Intake ID · Carecentrix</FieldLabel>
-                <Input
-                  value={state.intakeId ?? ""}
-                  onChange={(e) => onChange({ intakeId: e.target.value })}
-                  placeholder="e.g. INTAKE-789"
-                  className="mt-1 h-9 bg-background font-mono text-sm"
-                />
-              </div>
-            )}
-          </div>
-        </StageBlock>
-
-        {/* STEP 2 — Authorizations Outstanding (return to this after the payer responds) */}
-        <StageBlock
-          stepNumber={2}
-          icon={<Inbox className="h-3.5 w-3.5" />}
-          title="Authorizations Outstanding"
-          subtitle="Return after payer responds"
-          tone="waiting"
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
-            <div className="sm:col-span-5">
-              <FieldLabel>Auth ID</FieldLabel>
-              <Input
-                value={state.authId ?? ""}
-                onChange={(e) => onChange({ authId: e.target.value })}
-                placeholder="e.g. AUTH-123456"
-                className="mt-1 h-9 bg-background font-mono text-sm"
-              />
-            </div>
-            {state.authSubmissionMethod === "Carecentrix Portal" && (
-              <div className="sm:col-span-5">
-                <FieldLabel>Intake ID · Carecentrix</FieldLabel>
-                <Input
-                  value={state.intakeId ?? ""}
-                  onChange={(e) => onChange({ intakeId: e.target.value })}
-                  placeholder="e.g. INTAKE-789"
-                  className="mt-1 h-9 bg-background font-mono text-sm"
-                />
-              </div>
-            )}
-            <div className="sm:col-span-2">
-              <FieldLabel>Auth Start</FieldLabel>
-              <Input
-                type="date"
-                value={state.authStart ?? ""}
-                onChange={(e) => onChange({ authStart: e.target.value })}
-                className="mt-1 h-9 bg-background"
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <FieldLabel>Auth End</FieldLabel>
-              <Input
-                type="date"
-                value={state.authEnd ?? ""}
-                onChange={(e) => onChange({ authEnd: e.target.value })}
-                className="mt-1 h-9 bg-background"
-              />
-            </div>
-            <div>
-              <FieldLabel>Units</FieldLabel>
-              <Input
-                type="number"
-                inputMode="numeric"
-                min={0}
-                value={state.authUnits ?? ""}
-                onChange={(e) => onChange({ authUnits: e.target.value })}
-                placeholder="90"
-                className="mt-1 h-9 bg-background"
-              />
-            </div>
-          </div>
-        </StageBlock>
-      </div>
-    </div>
-  );
-}
-
-function StageBlock({
-  stepNumber,
-  icon,
-  title,
-  subtitle,
-  tone = "active",
-  children,
-}: {
-  stepNumber: 1 | 2;
-  icon: React.ReactNode;
-  title: string;
-  subtitle?: string;
-  tone?: "active" | "waiting";
-  children: React.ReactNode;
-}) {
-  const isActive = tone === "active";
-  // Both steps use the same teal-mint family from medicallymodern.com
-  // Step 1 → lighter teal   Step 2 → deeper teal
-  const palette = isActive
-    ? {
-        cardBorder: "border-[#7BA89C]/40 shadow-card",
-        headerBg: "bg-[#E8F4F0] border-[#7BA89C]/25",
-        badgeBg: "bg-[#7BA89C] text-white border-[#7BA89C]",
-        labelText: "text-[#5A8A7E]",
-        chipBg: "bg-[#7BA89C]/15 text-[#5A8A7E]",
-      }
-    : {
-        cardBorder: "border-[#0F4C5C]/35 shadow-card",
-        headerBg: "bg-[#0F4C5C]/10 border-[#0F4C5C]/20",
-        badgeBg: "bg-[#0F4C5C] text-white border-[#0F4C5C]",
-        labelText: "text-[#0F4C5C]",
-        chipBg: "bg-[#0F4C5C]/15 text-[#0F4C5C]",
-      };
-
-  return (
-    <div
-      className={cn(
-        "rounded-lg border bg-background overflow-hidden flex flex-col",
-        palette.cardBorder,
-      )}
-    >
-      {/* Header bar */}
-      <div className={cn("flex items-center gap-3 px-4 py-3 border-b", palette.headerBg)}>
-        <span
-          className={cn(
-            "h-9 w-9 rounded-full flex items-center justify-center text-base font-bold shrink-0 border-2",
-            palette.badgeBg,
-          )}
-          aria-label={`Step ${stepNumber}`}
-        >
-          {stepNumber}
-        </span>
-        <div className="min-w-0 flex-1">
-          <h5 className="text-sm font-semibold leading-tight">{title}</h5>
-          {subtitle && (
-            <p className="text-[11px] text-muted-foreground mt-0.5">{subtitle}</p>
           )}
         </div>
       </div>
-
-      {/* Body */}
-      <div className="p-4 flex-1">{children}</div>
     </div>
   );
 }
