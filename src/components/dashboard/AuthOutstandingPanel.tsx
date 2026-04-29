@@ -14,8 +14,7 @@ import {
   type ResolvedProduct,
 } from "@/lib/hcpcRules";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Package, Repeat, Send, Inbox, ShieldCheck, Clock } from "lucide-react";
+import { Package, Repeat, Send, Inbox, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -48,9 +47,9 @@ export function AuthOutstandingPanel({ patient, onCodeChange }: Props) {
     <section className="rounded-xl border bg-card p-5 shadow-card space-y-6">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
-          <h2 className="text-base font-semibold">Authorizations</h2>
+          <h2 className="text-base font-semibold">Authorizations Outstanding</h2>
           <p className="text-xs text-muted-foreground">
-            Track auth submissions and outstanding approvals for each required product.
+            Review submission info and enter approval details for each required product.
           </p>
         </div>
       </div>
@@ -73,8 +72,7 @@ export function AuthOutstandingPanel({ patient, onCodeChange }: Props) {
       {dropdownsReady && authRequired.length === 0 && (
         <div className="rounded-lg border border-dashed bg-muted/20 p-8 text-center">
           <p className="text-sm text-muted-foreground">
-            Set a product above to <span className="font-semibold">Required</span> to track its
-            submission and outstanding approval below.
+            No products with auth required found.
           </p>
         </div>
       )}
@@ -144,47 +142,28 @@ function ProductAuthBlock({ meta, resolved, state, onChange }: BlockProps) {
         </span>
       </div>
 
-      {/* Two clearly separated step cards — sit on the muted wash so the gap reads as space between two workstations */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 bg-muted/20">
 
-        {/* STEP 1 — Submit Auth (do this first) */}
+        {/* STEP 1 — Submit Auth (read-only EXCEPT Auth ID) */}
         <StageBlock
           stepNumber={1}
           icon={<Send className="h-3.5 w-3.5" />}
           title="Submit Auth"
-          subtitle="Do this first"
+          subtitle="Read-only — submitted previously"
           tone="active"
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="sm:col-span-2">
               <FieldLabel>Auth Submission Method</FieldLabel>
-              <Select
-                value={state.authSubmissionMethod || "__none__"}
-                onValueChange={(v) =>
-                  onChange({
-                    authSubmissionMethod: (v === "__none__" ? "" : v) as AuthSubmissionMethod,
-                  })
-                }
-              >
-                <SelectTrigger className="mt-1 h-9 bg-background font-medium">
-                  <SelectValue placeholder="Select submission method…" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">— Not selected —</SelectItem>
-                  {AUTH_SUBMISSION_METHODS.map((m) => (
-                    <SelectItem key={m} value={m}>{m}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="mt-1 h-9 flex items-center px-3 rounded-md border bg-muted text-sm font-medium text-foreground/80">
+                {state.authSubmissionMethod || "—"}
+              </div>
             </div>
             <div>
               <FieldLabel>Auth Submission Date</FieldLabel>
-              <Input
-                type="date"
-                value={state.authSubmissionDate ?? ""}
-                onChange={(e) => onChange({ authSubmissionDate: e.target.value })}
-                className="mt-1 h-9 bg-background"
-              />
+              <div className="mt-1 h-9 flex items-center px-3 rounded-md border bg-muted text-sm text-foreground/80">
+                {state.authSubmissionDate || "—"}
+              </div>
             </div>
             <div>
               <FieldLabel>Auth ID</FieldLabel>
@@ -198,46 +177,23 @@ function ProductAuthBlock({ meta, resolved, state, onChange }: BlockProps) {
             {state.authSubmissionMethod === "Carecentrix Portal" && (
               <div className="sm:col-span-2">
                 <FieldLabel>Intake ID · Carecentrix</FieldLabel>
-                <Input
-                  value={state.intakeId ?? ""}
-                  onChange={(e) => onChange({ intakeId: e.target.value })}
-                  placeholder="e.g. INTAKE-789"
-                  className="mt-1 h-9 bg-background font-mono text-sm"
-                />
+                <div className="mt-1 h-9 flex items-center px-3 rounded-md border bg-muted text-sm font-mono text-foreground/80">
+                  {state.intakeId || "—"}
+                </div>
               </div>
             )}
           </div>
         </StageBlock>
 
-        {/* STEP 2 — Authorizations Outstanding (return to this after the payer responds) */}
+        {/* STEP 2 — Authorizations Outstanding (fully editable) */}
         <StageBlock
           stepNumber={2}
           icon={<Inbox className="h-3.5 w-3.5" />}
           title="Authorizations Outstanding"
-          subtitle="Return after payer responds"
+          subtitle="Enter approval details"
           tone="waiting"
         >
           <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
-            <div className="sm:col-span-5">
-              <FieldLabel>Auth ID</FieldLabel>
-              <Input
-                value={state.authId ?? ""}
-                onChange={(e) => onChange({ authId: e.target.value })}
-                placeholder="e.g. AUTH-123456"
-                className="mt-1 h-9 bg-background font-mono text-sm"
-              />
-            </div>
-            {state.authSubmissionMethod === "Carecentrix Portal" && (
-              <div className="sm:col-span-5">
-                <FieldLabel>Intake ID · Carecentrix</FieldLabel>
-                <Input
-                  value={state.intakeId ?? ""}
-                  onChange={(e) => onChange({ intakeId: e.target.value })}
-                  placeholder="e.g. INTAKE-789"
-                  className="mt-1 h-9 bg-background font-mono text-sm"
-                />
-              </div>
-            )}
             <div className="sm:col-span-2">
               <FieldLabel>Auth Start</FieldLabel>
               <Input
@@ -291,22 +247,16 @@ function StageBlock({
   children: React.ReactNode;
 }) {
   const isActive = tone === "active";
-  // Both steps use the same teal-mint family from medicallymodern.com
-  // Step 1 → lighter teal   Step 2 → deeper teal
   const palette = isActive
     ? {
         cardBorder: "border-[#7BA89C]/40 shadow-card",
         headerBg: "bg-[#E8F4F0] border-[#7BA89C]/25",
         badgeBg: "bg-[#7BA89C] text-white border-[#7BA89C]",
-        labelText: "text-[#5A8A7E]",
-        chipBg: "bg-[#7BA89C]/15 text-[#5A8A7E]",
       }
     : {
         cardBorder: "border-[#0F4C5C]/35 shadow-card",
         headerBg: "bg-[#0F4C5C]/10 border-[#0F4C5C]/20",
         badgeBg: "bg-[#0F4C5C] text-white border-[#0F4C5C]",
-        labelText: "text-[#0F4C5C]",
-        chipBg: "bg-[#0F4C5C]/15 text-[#0F4C5C]",
       };
 
   return (
@@ -316,7 +266,6 @@ function StageBlock({
         palette.cardBorder,
       )}
     >
-      {/* Header bar */}
       <div className={cn("flex items-center gap-3 px-4 py-3 border-b", palette.headerBg)}>
         <span
           className={cn(
@@ -334,8 +283,6 @@ function StageBlock({
           )}
         </div>
       </div>
-
-      {/* Body */}
       <div className="p-4 flex-1">{children}</div>
     </div>
   );
@@ -356,7 +303,6 @@ function AuthRequirementsMatrix({
   resolved: ResolvedProduct[];
   ins: { codes: Partial<Record<ProductCodeId, ProductCodeState>> };
 }) {
-  // Show all 5 products, in canonical order
   const ALL: ProductId[] = ["monitor", "sensors", "insulin_pump", "infusion_set", "cartridge"];
   const servedSet = new Set(resolved.map((r) => r.product));
 
