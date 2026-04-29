@@ -1,0 +1,248 @@
+/**
+ * hcpcRules.ts
+ * ============
+ * Resolves the HCPC code(s) and active products for a patient given:
+ *   - Primary Insurance (e.g. "Fidelis Medicaid", "Aetna Commercial")
+ *   - Serving           (e.g. "Insulin Pump + CGM", "Supplies Only")
+ *
+ * Mirrors insurance_rules.py + intake_insurance_resolver.py from the
+ * stedi-monday-integration repo so frontend and backend agree on every
+ * HCPC. When the source-of-truth tables change there, change them here.
+ *
+ * Usage:
+ *   const resolved = resolveHcpcs("Fidelis Medicaid", "Insulin Pump + CGM");
+ *   // [
+ *   //   { product: "monitor",      hcpc: "E2103", billsTo: "primary"  },
+ *   //   { product: "sensors",      hcpc: "A4239", billsTo: "primary"  },
+ *   //   { product: "insulin_pump", hcpc: "E0784", billsTo: "primary"  },
+ *   //   { product: "infusion_set", hcpc: "A4230", billsTo: "medicaid" },
+ *   //   { product: "cartridge",    hcpc: "A4232", billsTo: "medicaid" },
+ *   // ]
+ */
+
+// ─────────────────────────────────────────────────────────────────────
+// Types — keep aligned with the dropdown options in your form
+// ─────────────────────────────────────────────────────────────────────
+
+export type PrimaryInsurance =
+  // Fidelis
+  | "Fidelis Medicaid"
+  | "Fidelis Low-Cost"
+  | "Fidelis Commercial"
+  | "Fidelis Medicare"
+  // Anthem / BCBS
+  | "Anthem BCBS Medicare"
+  | "Anthem BCBS Commercial"
+  | "Anthem BCBS Medicaid (JLJ)"
+  | "Anthem BCBS Low-Cost (JLJ)"
+  | "Horizon BCBS"
+  | "BCBS TN"
+  | "BCBS FL"
+  | "BCBS WY"
+  // United
+  | "United Medicare"
+  | "United Medicaid"
+  | "United Commercial"
+  | "United Low-Cost"
+  // Aetna
+  | "Aetna Medicare"
+  | "Aetna Commercial"
+  // Government
+  | "Medicare A&B"
+  | "Medicaid"
+  | "NYSHIP"
+  // Other
+  | "Cigna"
+  | "Humana"
+  | "Wellcare"
+  | "Midlands Choice"
+  | "MagnaCare"
+  | "UMR"
+  | "Oregon Care";
+
+export type Serving =
+  | "Supplies Only"
+  | "CGM"
+  | "Insulin Pump"
+  | "Supplies + CGM"
+  | "Insulin Pump + CGM";
+
+export type ProductId =
+  | "monitor"
+  | "sensors"
+  | "insulin_pump"
+  | "infusion_set"
+  | "cartridge";
+
+export interface ResolvedProduct {
+  product: ProductId;
+  /** The single HCPC dictated by the rules. "Evaluate" if the payer is unknown. */
+  hcpc: string;
+  /** Whether this product bills to the patient's primary insurance or to Medicaid. */
+  billsTo: "primary" | "medicaid";
+  /** For supplies, which payer-group letter applied (debug aid). Undefined for fixed-HCPC products. */
+  group?: "A" | "B" | "C";
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Fixed HCPCs — same for every payer (PRD §11)
+// ─────────────────────────────────────────────────────────────────────
+
+const MONITOR_HCPC      = "E2103";
+const SENSORS_HCPC      = "A4239";
+const INSULIN_PUMP_HCPC = "E0784";
+
+// ─────────────────────────────────────────────────────────────────────
+// Variable HCPCs — supplies side, vary by payer group
+// ─────────────────────────────────────────────────────────────────────
+
+const SUPPLY_HCPC_GROUPS = {
+  A: { infusion_set: "A4230", cartridge: "A4232" },
+  B: { infusion_set: "A4224", cartridge: "A4225" },
+  C: { infusion_set: "A4231", cartridge: "A4232" },
+} as const;
+
+const SUPPLY_HCPC_GROUP_BY_PAYER: Record<PrimaryInsurance, "A" | "B" | "C"> = {
+  // Group A
+  "Fidelis Medicaid":           "A",
+  "Fidelis Low-Cost":           "A",
+  "Fidelis Commercial":         "A",
+  "Anthem BCBS Commercial":     "A",
+  "Anthem BCBS Medicaid (JLJ)": "A",
+  "Anthem BCBS Low-Cost (JLJ)": "A",
+  "United Medicaid":            "A",
+  "United Commercial":          "A",
+  "United Low-Cost":            "A",
+  "Horizon BCBS":               "A",
+  "BCBS TN":                    "A",
+  "BCBS FL":                    "A",
+  "BCBS WY":                    "A",
+  "Medicaid":                   "A",
+  "Oregon Care":                "A",
+  "MagnaCare":                  "A",
+  "UMR":                        "A",
+  // Group B
+  "Anthem BCBS Medicare":       "B",
+  "Fidelis Medicare":           "B",
+  "Medicare A&B":               "B",
+  "NYSHIP":                     "B",
+  "United Medicare":            "B",
+  "Wellcare":                   "B",
+  "Humana":                     "B",
+  "Cigna":                      "B",
+  "Midlands Choice":            "B",
+  // Group C — Aetna only
+  "Aetna Commercial":           "C",
+  "Aetna Medicare":             "C",
+};
+
+// ─────────────────────────────────────────────────────────────────────
+// Supplies → Medicaid routing override (PRD §9.2)
+// If the patient's primary insurance is one of these, the supplies side
+// (infusion sets + cartridges) bills to Medicaid instead — which means
+// the supplies HCPC comes from the Medicaid row of the table above.
+// ─────────────────────────────────────────────────────────────────────
+
+const SUPPLIES_ROUTE_TO_MEDICAID = new Set<PrimaryInsurance>([
+  "Fidelis Medicaid",
+  "Anthem BCBS Medicaid (JLJ)",
+  "Medicaid",
+]);
+
+// ─────────────────────────────────────────────────────────────────────
+// Serving → active products (PRD §10)
+// ─────────────────────────────────────────────────────────────────────
+
+const SERVING_PRODUCTS: Record<Serving, ProductId[]> = {
+  "Supplies Only":      ["infusion_set", "cartridge"],
+  "CGM":                ["monitor", "sensors"],
+  "Insulin Pump":       ["insulin_pump", "infusion_set", "cartridge"],
+  "Supplies + CGM":     ["monitor", "sensors", "infusion_set", "cartridge"],
+  "Insulin Pump + CGM": ["monitor", "sensors", "insulin_pump", "infusion_set", "cartridge"],
+};
+
+// ─────────────────────────────────────────────────────────────────────
+// Main resolver
+// ─────────────────────────────────────────────────────────────────────
+
+/**
+ * Resolve the active products and their HCPC codes for a patient.
+ * Returns [] if either input is empty/unknown.
+ */
+export function resolveHcpcs(
+  primaryInsurance: PrimaryInsurance | "" | null | undefined,
+  serving: Serving | "" | null | undefined,
+): ResolvedProduct[] {
+  if (!primaryInsurance || !serving) return [];
+
+  const products = SERVING_PRODUCTS[serving as Serving];
+  if (!products) return [];
+
+  const suppliesToMedicaid = SUPPLIES_ROUTE_TO_MEDICAID.has(primaryInsurance as PrimaryInsurance);
+  const suppliesPayer: PrimaryInsurance = suppliesToMedicaid
+    ? "Medicaid"
+    : (primaryInsurance as PrimaryInsurance);
+  const suppliesGroup = SUPPLY_HCPC_GROUP_BY_PAYER[suppliesPayer];
+
+  return products.map((product): ResolvedProduct => {
+    switch (product) {
+      case "monitor":
+        return { product, hcpc: MONITOR_HCPC, billsTo: "primary" };
+      case "sensors":
+        return { product, hcpc: SENSORS_HCPC, billsTo: "primary" };
+      case "insulin_pump":
+        return { product, hcpc: INSULIN_PUMP_HCPC, billsTo: "primary" };
+      case "infusion_set":
+        if (!suppliesGroup) {
+          return { product, hcpc: "Evaluate", billsTo: suppliesToMedicaid ? "medicaid" : "primary" };
+        }
+        return {
+          product,
+          hcpc: SUPPLY_HCPC_GROUPS[suppliesGroup].infusion_set,
+          billsTo: suppliesToMedicaid ? "medicaid" : "primary",
+          group: suppliesGroup,
+        };
+      case "cartridge":
+        if (!suppliesGroup) {
+          return { product, hcpc: "Evaluate", billsTo: suppliesToMedicaid ? "medicaid" : "primary" };
+        }
+        return {
+          product,
+          hcpc: SUPPLY_HCPC_GROUPS[suppliesGroup].cartridge,
+          billsTo: suppliesToMedicaid ? "medicaid" : "primary",
+          group: suppliesGroup,
+        };
+    }
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Helpers — useful for populating dropdowns
+// ─────────────────────────────────────────────────────────────────────
+
+export const PRIMARY_INSURANCE_OPTIONS: PrimaryInsurance[] = [
+  "Fidelis Medicaid", "Fidelis Low-Cost", "Fidelis Commercial", "Fidelis Medicare",
+  "Anthem BCBS Medicare", "Anthem BCBS Commercial",
+  "Anthem BCBS Medicaid (JLJ)", "Anthem BCBS Low-Cost (JLJ)",
+  "Horizon BCBS", "BCBS TN", "BCBS FL", "BCBS WY",
+  "United Medicare", "United Medicaid", "United Commercial", "United Low-Cost",
+  "Aetna Medicare", "Aetna Commercial",
+  "Medicare A&B", "Medicaid", "NYSHIP",
+  "Cigna", "Humana", "Wellcare", "Midlands Choice", "MagnaCare", "UMR", "Oregon Care",
+];
+
+export const SERVING_OPTIONS: Serving[] = [
+  "Supplies Only",
+  "CGM",
+  "Insulin Pump",
+  "Supplies + CGM",
+  "Insulin Pump + CGM",
+];
+
+export const PRODUCT_LABELS: Record<ProductId, string> = {
+  monitor:      "CGM Monitor",
+  sensors:      "CGM Sensors",
+  insulin_pump: "Insulin Pump",
+  infusion_set: "Infusion Sets",
+  cartridge:    "Cartridges",
+};
