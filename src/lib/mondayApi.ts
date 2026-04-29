@@ -331,14 +331,21 @@ export interface MondayAsset {
  */
 export async function fetchItemAssets(itemId: string): Promise<MondayAsset[]> {
   const query = `
-    query ($ids: [ID!]!) {
-      items(ids: $ids) {
-        assets { id name url public_url }
+    query ($boardId: ID!, $itemId: String!) {
+      boards(ids: [$boardId]) {
+        items_page(limit: 1, query_params: { ids: [$itemId] }) {
+          items {
+            assets(assets_source: all) { id name url public_url }
+          }
+        }
       }
     }
   `;
-  const data = await gql<{ items: { assets: MondayAsset[] }[] }>(query, {
-    ids: [itemId],
+  const data = await gql<{
+    boards: { items_page: { items: { assets: MondayAsset[] }[] } }[];
+  }>(query, {
+    boardId: BOARD_ID,
+    itemId,
   });
-  return data.items?.[0]?.assets ?? [];
+  return data.boards?.[0]?.items_page?.items?.[0]?.assets ?? [];
 }
