@@ -1,110 +1,348 @@
-# Samantha Checklist — Insurance & Benefits Tool
+# Samantha Checklist — Developer Guide
 
-## What This Is
-Internal tool for Medically Modern's insurance verification workflow. Samantha uses this to process patients through the Benefits → Authorization → Complete pipeline on a Monday.com board.
+> **Who this is for:** Josh and Brandon (and their Claudes). This doc is the single source of truth for how the codebase works, what lives where, and how to make changes without breaking things.
+
+## What This App Does
+
+Internal tool for Medically Modern. Samantha uses it to process patients through the **Benefits → Authorization → Complete** pipeline on a Monday.com board. The app reads patient data from Monday, presents a UI for insurance verification decisions, and writes the results back to Monday when the user clicks "Send to Monday."
 
 ## Stack
-React + Vite + TypeScript + Tailwind CSS + shadcn/ui. Deployed to GitHub Pages via Actions.
 
-## Monday.com Integration
-All reads and writes go to **Board ID 18410601299** (Insurance board) via Monday's GraphQL API.
+React + Vite + TypeScript + Tailwind CSS + shadcn/ui. Deployed to **GitHub Pages** via GitHub Actions.
 
-### API Setup
-- Endpoint: `https://api.monday.com/v2` (POST, GraphQL)
-- Token: baked in at build time via `VITE_MONDAY_API_TOKEN` env var (set as GitHub secret)
-- API version header: `2024-10`
+- Repo: `https://github.com/medically-modern/Samantha-checklist`
+- Live: `https://medically-modern.github.io/Samantha-checklist/`
+- Branch: `main` (push triggers deploy)
 
-### Key Files
+## Monday.com Board
+
+All reads and writes go to **Board ID `18410601299`** (Insurance board).
+
+**API setup:** GraphQL endpoint `https://api.monday.com/v2`, POST, header `API-Version: 2024-10`. Token baked in at build time via `VITE_MONDAY_API_TOKEN` env var (set as a GitHub repo secret).
+
+**Groups on this board:**
+
+| Group | ID | Purpose |
+|---|---|---|
+| Benefits | `group_mm1xr3q3` | Current Benefits tab reads from here |
+| Submit Auth | `group_mm1x1416` | Auth tab reads from here |
+| Auth Outstanding | `group_mm2v6d1z` | — |
+| Escalations | `group_mm2vg9gn` | — |
+| Complete / Stuck | `group_mm2vw3c0` | — |
+
+---
+
+## The Data Flow (Read → UI → Write)
+
+Understanding this chain is critical. Here's exactly how data moves:
+
 ```
-src/lib/mondayApi.ts      — GraphQL client, board ID, group IDs, column ID map (COL), read query
-src/lib/mondayMapping.ts  — Maps Monday items → Patient objects, status index constants
-src/lib/mondayWrite.ts    — sendPatientToMonday() — batch writes all columns via Promise.all
-src/lib/hcpcRules.ts      — Insurance → HCPC code resolver (which products, which codes, bills-to logic)
-src/lib/workflow.ts       — Patient type, InsuranceState type, stage definitions, deriveInsuranceOutcome()
-src/hooks/useMondayPatients.ts — React hook: fetches patients, polls every 30s, local overlay for edits
+Monday Board
+  ↓  fetchGroupItems(groupId)          ← mondayApi.ts
+  ↓  mondayItemToPatient(item)         ← mondayMapping.ts
+  ↓
+Patient object (in React state)
+  ↓  useMondayPatients hook            ← hooks/useMondayPatients.ts
+  ↓  polls every 30s, local overlay preserves UI edits
+  ↓
+InsurancePanel.tsx (user makes selections)
+  ↓  deriveMondayColumns(patient, resolved)   ← InsurancePanel.tsx ~line 478
+  ↓  MondayOutput component                   ← InsurancePanel.tsx ~line 590
+  ↓  Shows preview of what will be written
+  ↓
+User clicks "Send to Monday"
+  ↓  sendPatientToMonday(patient)      ← mondayWrite.ts
+  ↓  Translates display values → numeric indices from mondayMapping.ts
+  ↓  Fires all mutations via Promise.all
+  ↓
+Monday Board (columns updated)
 ```
 
-### Board Groups
-```
-Benefits:         group_mm1xr3q3   ← current tab reads from here
-Submit Auth:      group_mm1x1416   ← new auth tab reads from here
-Auth Outstanding: group_mm2v6d1z
-Escalations:      group_mm2vg9gn
-Complete / Stuck: group_mm2vw3c0
+**Key point:** Nothing writes to Monday until the user clicks the button. All selections are local-only until then.
+
+---
+
+## File Map — What Lives Where
+
+### `src/lib/mondayApi.ts` — API Layer (READ + WRITE primitives)
+
+This is the **plumbing**. It defines:
+
+- `BOARD_ID` — the board number (`18410601299`)
+- `GROUPS` — group IDs for each section of the board
+- `COL` — the master column ID map. **Every column ID in the entire app must come from this object.** Never hardcode a column ID anywhere else.
+- `READ_COLUMN_IDS` — the columns fetched on load (currently 6). Keep this minimal — reading too many columns causes 503 errors.
+- `fetchGroupItems(groupId)` — reads items from a group
+- `writeStatusIndex()`, `writeLongText()`, `writeDropdownIds()` — low-level write functions
+
+**When to edit:** Only if you're adding a new column to read, a new group, or a new write function type. Do NOT put business logic here.
+
+### `src/lib/mondayMapping.ts` — Status Index Constants + Item Conversion
+
+This maps between **Monday's numeric status indices** and the app's types.
+
+**Status indices** (the most important thing in this file):
+```typescript
+UNIVERSAL_INDEX = {
+  activeNetwork: { pass: 1, fail: 2 },
+  dmeBenefits:   { pass: 1, fail: 2 },
+  sos:           { pass: 1, fail: 2, skip: 0 },
+  auth:          { noAuth: 1, required: 0 },
+}
+
+STAGE_INDEX = {
+  stuck: 2, benefitsSos: 3, authorization: 4,
+  authOutstanding: 6, complete: 7,
+}
+
+AUTH_RESULT_INDEX = {
+  evaluate: 0, authValid: 1, denied: 2,
+  noAuthNeeded: 3, submitted: 4, required: 6, notServing: 7,
+}
+
+ESCALATION_INDEX = { required: 0, done: 1 }
+
+NOT_CLEAR_PRODUCT_ID = { pump: 1, "cgm-monitor": 2, "cgm-sensors": 3, "infusion-sets": 4, cartridges: 5 }
 ```
 
-### Column IDs — DO NOT GUESS THESE
-All column IDs are defined in `COL` object in `mondayApi.ts`. Never hardcode a column ID anywhere else. If you need a new column, query the board first:
+Also contains `mondayItemToPatient()` which converts raw Monday API items into `Patient` objects.
+
+**When to edit:** When a status label is added/removed on the Monday board. Query the column's `settings_str` to find the correct index — **never guess**.
+
+### `src/lib/mondayWrite.ts` — Batch Writer ("Send to Monday")
+
+`sendPatientToMonday(patient)` is the only function here. It:
+
+1. Reads the patient's insurance state
+2. Translates each selection into the correct numeric index (from `mondayMapping.ts`)
+3. Fires all writes in parallel via `Promise.all`
+
+**What it writes:**
+- Active/Network status
+- DME Benefits status
+- Per-product auth results (Required / No Auth Needed / Not Serving)
+- Not Clear Products dropdown
+- SoS status (All Clear / Partial-Not Clear / Skip)
+- Auth determination (Auths Required / No Auths Required)
+- Stage Advancer (Benefits/SoS → Authorization → Complete → Stuck)
+- Escalation (if needed)
+- Call Reference Notes (long text)
+
+**When to edit:** When you add a new column to write, or change the write logic (e.g., what triggers an escalation).
+
+### `src/lib/hcpcRules.ts` — Insurance & Product Rules ⭐ BRANDON'S PRIMARY EDIT TARGET
+
+This is the **business rules engine**. Given a patient's insurance + serving type, it resolves which products they get and which HCPC codes apply.
+
+**Key data structures Brandon will edit:**
+
+| Constant | What it controls | Example change |
+|---|---|---|
+| `SERVING_PRODUCTS` | Which products are active for each serving type | Adding a new serving type |
+| `SUPPLY_HCPC_GROUP_BY_PAYER` | Which payer group (A/B/C) each insurance maps to | Adding a new insurance, changing a payer's group |
+| `SUPPLY_HCPC_GROUPS` | The actual HCPC codes for groups A, B, C | Changing a code (rare) |
+| `SUPPLIES_ROUTE_TO_MEDICAID` | Insurances where supplies bill to Medicaid | Adding/removing a Medicaid-routing payer |
+| `PRIMARY_INSURANCE_OPTIONS` | Insurance dropdown list in the UI | Adding a new insurance option |
+| `SERVING_OPTIONS` | Serving dropdown list in the UI | Adding a new serving option |
+
+**The three payer groups:**
+- **Group A** (most commercial + Medicaid): Infusion Set = A4230, Cartridge = A4232
+- **Group B** (Medicare + some national): Infusion Set = A4224, Cartridge = A4225
+- **Group C** (Aetna only): Infusion Set = A4231, Cartridge = A4232
+
+**When to edit:** When insurance rules change, a new payer is added, HCPC codes change, or Medicaid routing rules change.
+
+### `src/lib/workflow.ts` — Core Types & Business Logic
+
+Defines `Patient`, `InsuranceState`, `ProductCodeState`, and `deriveInsuranceOutcome()`.
+
+`deriveInsuranceOutcome()` determines the overall result:
+- `"incomplete"` — user hasn't finished filling everything out
+- `"all-clear"` — no auths needed, SoS all clear
+- `"auth-required"` — at least one product needs authorization
+- `"blocker"` — universal check failed or SoS not clear → escalation
+
+**When to edit:** When outcome logic changes (e.g., new escalation conditions). Rarely needs editing.
+
+### `src/components/dashboard/InsurancePanel.tsx` — Main UI + Routing Logic
+
+This is a big file (~714 lines) that contains:
+
+1. **The UI** — universal checks, per-product auth/SoS dropdowns, notes
+2. **`deriveMondayColumns(patient, resolved)`** (~line 478) — the routing function that converts user selections into display values for the Monday output preview
+3. **`MondayOutput` component** (~line 590) — renders the Monday output preview and computes per-product auth result rows inline
+
+**The routing logic in `deriveMondayColumns()`:**
+
+```
+User selects "In-Network: Confirmed" + "Active: Confirmed"
+  → deriveMondayColumns returns activeNetwork = "Active/In-network"
+  → mondayWrite.ts translates that to UNIVERSAL_INDEX.activeNetwork.pass (= 1)
+  → writes {"index": 1} to Monday column color_mm2vhwan
+
+User selects Auth = "Required" for CGM Monitor
+  → deriveMondayColumns returns auth = "Auths Required"
+  → MondayOutput shows CGM auth result = "Required"
+  → mondayWrite.ts writes AUTH_RESULT_INDEX.required (= 6) to COL.authResult.monitor
+
+All products have auth = "required" (no SoS-relevant products)
+  → deriveMondayColumns returns sos = "Skip"
+  → mondayWrite.ts writes UNIVERSAL_INDEX.sos.skip (= 0) to Monday
+```
+
+**When to edit:** When you want to change how user selections map to Monday output values. This is where "if I select X, Y, Z → Monday should show W" lives.
+
+### `src/hooks/useMondayPatients.ts` — Data Fetching Hook
+
+React hook that:
+- Calls `fetchGroupItems()` on mount and every 30 seconds
+- Maintains a **local overlay** (`overlayRef`) so UI edits survive polling re-fetches
+- Exposes `update(id, patch)` for local-only changes and `clearOverlay(id)` after successful writes
+
+**When to edit:** Rarely. Only if you need to change polling behavior or add a second data source.
+
+### `src/components/dashboard/SendToMondayButton.tsx` — The Submit Button
+
+Calls `sendPatientToMonday()` and shows success/error state. Straightforward.
+
+---
+
+## Monday Column IDs — Why They Matter
+
+Monday's API uses opaque column IDs like `color_mm2vhwan`. These IDs are:
+
+- **Board-specific** — the same column on a different board has a different ID
+- **Immutable** — Monday assigns them when the column is created, they never change
+- **Not guessable** — you must query them from the API
+
+**All column IDs live in the `COL` object in `mondayApi.ts`.** This is the single source of truth. If you need a column ID that isn't in `COL`, query the board:
+
 ```graphql
 { boards(ids: [18410601299]) { columns { id title type settings_str } } }
 ```
 
-### Status Columns — Write by Index, Not Label
-Monday status columns use numeric indices. The label-to-index mapping is in `mondayMapping.ts`. Example:
-- SoS: `{ pass: 1, fail: 2, skip: 0 }` → writes `{"index": 0}` for Skip
-- Auth: `{ noAuth: 1, required: 0 }`
-- Stage Advancer: `{ stuck: 2, benefitsSos: 3, authorization: 4, authOutstanding: 6, complete: 7 }`
+**Status columns are written by numeric index, not by label text.** The label "Active/In-network" doesn't go to Monday — the number `1` does. The index-to-label mapping is defined in the board's column settings and mirrored in `mondayMapping.ts`. If someone adds a new status label on the Monday board, you need to:
 
-### Read vs Write Flow
-- **Read:** `fetchGroupItems(groupId)` pulls items with `READ_COLUMN_IDS` columns. Keep this array minimal (currently 6 columns). More columns = slower API response.
-- **Write:** Nothing writes to Monday until user clicks "Send to Monday". `sendPatientToMonday()` fires all mutations in parallel via `Promise.all`.
+1. Query the column's `settings_str` to find the new index
+2. Add it to the appropriate constant in `mondayMapping.ts`
+3. Reference it from `mondayWrite.ts`
 
-## Rules
-1. **Never add columns to READ_COLUMN_IDS without good reason.** The app was hitting 503s when it read 17 columns. Currently reads 6.
-2. **Column IDs are board-specific.** Same board = same IDs across groups. Different board = different IDs entirely.
-3. **The `gql()` function must stay clean.** No proxies, no timeouts, no wrappers. Direct fetch to Monday's API.
-4. **Status index values come from Monday board settings.** If you need a new status option, query the column's `settings_str` to find or create the index.
-5. **Keep automations in separate files.** Each feature/tab should have its own clearly named files.
+**Never guess an index.** Getting it wrong writes the wrong status to the board.
+
+---
+
+## Collaboration Rules — Don't Step on Each Other
+
+### Josh's territory:
+- `mondayApi.ts` — API plumbing, new columns, new groups
+- `mondayWrite.ts` — write logic, new column writes
+- `useMondayPatients.ts` — data fetching
+- `InsurancePanel.tsx` — UI layout, routing logic in `deriveMondayColumns()`
+- GitHub Actions / deployment config
+
+### Brandon's territory:
+- `hcpcRules.ts` — insurance rules, payer groups, HCPC codes, dropdown options
+- `mondayMapping.ts` — status index values (when Monday board labels change)
+
+### Shared / be careful:
+- `workflow.ts` — types and outcome logic (discuss before changing)
+- `InsurancePanel.tsx` routing logic — if Brandon needs to change "what gets written when," coordinate with Josh since the routing function touches both rules and write logic
+
+### Before pushing changes:
+1. **Test locally** — `npm run dev` and verify the UI renders correctly
+2. **Check Monday output preview** — pick a test patient, make selections, verify the Monday Output section shows the right values
+3. **Don't edit `READ_COLUMN_IDS`** without discussing — adding columns can cause 503 errors if you read too many
+4. **Don't modify `gql()`** — no proxies, no timeouts, no wrappers. Direct fetch only.
+
+---
+
+## Local Development
+
+```bash
+# Clone
+git clone https://github.com/medically-modern/Samantha-checklist.git
+cd Samantha-checklist
+
+# Install
+npm install
+
+# Create .env with the Monday API token
+echo "VITE_MONDAY_API_TOKEN=your_token_here" > .env
+
+# Run dev server
+npm run dev
+```
+
+The Monday API token is the same one used in production. Get it from Josh or from the GitHub repo secrets.
+
+**Build for production:**
+```bash
+npx vite build --base=/Samantha-checklist/
+```
+
+**Deploy:** Just push to `main`. GitHub Actions handles the rest.
+
+---
 
 ## Project Structure
+
 ```
-src/
-  components/
-    dashboard/          — Main UI panels (InsurancePanel, PatientsSidebar, SendToMondayButton, etc.)
-    ui/                 — shadcn/ui primitives (don't modify these)
-  hooks/
-    useMondayPatients.ts
-  lib/
-    mondayApi.ts        — API layer (READ)
-    mondayWrite.ts      — API layer (WRITE)
-    mondayMapping.ts    — Monday ↔ app type conversions + status indices
-    hcpcRules.ts        — Insurance/product resolution logic
-    workflow.ts         — Core types and business logic
-  pages/
-    Index.tsx           — Main page, wires everything together
+Samantha-checklist/
+├── .github/workflows/deploy.yml    ← GitHub Pages deploy (auto on push to main)
+├── src/
+│   ├── components/
+│   │   ├── dashboard/
+│   │   │   ├── InsurancePanel.tsx   ← Main UI + routing logic + Monday output
+│   │   │   ├── AuthorizationsPanel.tsx
+│   │   │   ├── PatientsSidebar.tsx  ← Patient list sidebar
+│   │   │   ├── SendToMondayButton.tsx
+│   │   │   ├── PatientCard.tsx
+│   │   │   ├── PatientProfileCard.tsx
+│   │   │   ├── PillarsChecklist.tsx
+│   │   │   ├── PathwayPanel.tsx
+│   │   │   └── DoctorRequestPanel.tsx
+│   │   └── ui/                     ← shadcn/ui primitives (don't modify)
+│   ├── hooks/
+│   │   └── useMondayPatients.ts    ← Fetch + poll + local overlay
+│   ├── lib/
+│   │   ├── mondayApi.ts            ← API client, board/group/column IDs
+│   │   ├── mondayMapping.ts        ← Status indices, item→Patient conversion
+│   │   ├── mondayWrite.ts          ← sendPatientToMonday() batch writer
+│   │   ├── hcpcRules.ts            ← Insurance rules engine (Brandon's file)
+│   │   └── workflow.ts             ← Types, outcome logic
+│   └── pages/
+│       └── Index.tsx               ← Main page, wires everything together
+├── CLAUDE.md                       ← This file
+├── package.json
+├── vite.config.ts
+└── index.html
 ```
 
-## Deployment
-Push to `main` → GitHub Actions builds → deploys to GitHub Pages at:
-`https://medically-modern.github.io/Samantha-checklist/`
+---
 
-The Monday API token must be set as a repository secret named `VITE_MONDAY_API_TOKEN`.
+## Common Tasks
 
-## Rules & Configuration (for Brandon)
+### "Add a new insurance option"
+1. Add the insurance name to the `PrimaryInsurance` type in `hcpcRules.ts`
+2. Add it to `PRIMARY_INSURANCE_OPTIONS` array in the same file
+3. Add its payer group assignment to `SUPPLY_HCPC_GROUP_BY_PAYER`
+4. If it routes supplies to Medicaid, add it to `SUPPLIES_ROUTE_TO_MEDICAID`
 
-The business rules live in two files. Everything else consumes their output — do not scatter rules into other files.
+### "Change what HCPC code a payer gets"
+1. Move the payer to the correct group (A/B/C) in `SUPPLY_HCPC_GROUP_BY_PAYER`
+2. Or if it's a new group, add it to `SUPPLY_HCPC_GROUPS`
 
-### `src/lib/hcpcRules.ts` — Product & Insurance Rules
-This file answers: "Given a patient's insurance and serving type, what products do they get and what HCPC codes apply?"
+### "Add a new status label on the Monday board"
+1. Query the column's `settings_str` to find the new label's index
+2. Add the index to the appropriate constant in `mondayMapping.ts`
+3. Reference it from `mondayWrite.ts` in the appropriate section
 
-- **`SERVING_PRODUCTS`** — Maps each serving type (e.g. "Insulin Pump + CGM") to its list of active products. Edit this to change what products appear for each serving type.
-- **`SUPPLY_HCPC_GROUP_BY_PAYER`** — Maps each insurance to a supply code group (A, B, or C). Groups determine which infusion set / cartridge HCPC codes are used. Edit this when adding a new insurance or changing a payer's group.
-- **`SUPPLY_HCPC_GROUPS`** — Defines the actual HCPC codes for each group (A/B/C). Only edit if the codes themselves change.
-- **`SUPPLIES_ROUTE_TO_MEDICAID`** — Set of insurances where supplies bill to Medicaid instead of primary. Edit this when adding/removing a Medicaid-routing payer.
-- **`PRIMARY_INSURANCE_OPTIONS`** / **`SERVING_OPTIONS`** — The dropdown lists shown in the UI. Must stay in sync with Monday board dropdown labels.
+### "Change what Monday writes when the user selects X"
+1. Find the routing logic in `InsurancePanel.tsx` → `deriveMondayColumns()`
+2. Trace how that display value maps to an index in `mondayWrite.ts`
+3. Change the conditional logic in whichever file is appropriate
 
-### `src/lib/mondayMapping.ts` — Status Index Mappings
-This file answers: "What number do I write to Monday for each status label?"
-
-- **`UNIVERSAL_INDEX`** — Indices for Active/Network, DME Benefits, SoS, Auth columns.
-- **`AUTH_RESULT_INDEX`** — Indices for the 5 per-product auth result columns (Evaluate, Auth Valid, Denied, No Auth Needed, Submitted, Required, Not Serving).
-- **`STAGE_INDEX`** — Stage Advancer indices.
-- **`ESCALATION_INDEX`** — Escalation column indices.
-- **`NOT_CLEAR_PRODUCT_ID`** — Dropdown option IDs for the "Not Clear Products" column.
-
-**If you add a new status label on the Monday board**, query the column's `settings_str` to find its index, then add it here. Never guess indices.
-
-### What NOT to edit for rule changes
-- `mondayApi.ts` — API plumbing, not rules
-- `mondayWrite.ts` — Reads from the mapping files above, doesn't contain rules
-- `workflow.ts` — Type definitions and outcome logic, not insurance/product rules
+### "Read a new column from Monday on page load"
+1. Add the column ID to `COL` in `mondayApi.ts`
+2. Add it to `READ_COLUMN_IDS` — **but be careful, keep this array small**
+3. Map it in `mondayItemToPatient()` in `mondayMapping.ts`
