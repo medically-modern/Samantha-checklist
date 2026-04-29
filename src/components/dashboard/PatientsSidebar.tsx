@@ -15,11 +15,16 @@ import type { Patient } from "@/lib/workflow";
 import type { SidebarGroup as SidebarGroupType } from "@/hooks/useMondayPatients";
 import { cn } from "@/lib/utils";
 
-const GROUP_TABS: { key: SidebarGroupType; label: string; shortLabel: string }[] = [
-  { key: "benefits", label: "Benefits", shortLabel: "Ben" },
-  { key: "submitAuth", label: "Submit Auth", shortLabel: "Sub" },
-  { key: "authOutstanding", label: "Auth Outstanding", shortLabel: "Out" },
+const AUTH_TABS: { key: SidebarGroupType; label: string }[] = [
+  { key: "submitAuth", label: "Submit Auth" },
+  { key: "authOutstanding", label: "Auth Outstanding" },
 ];
+
+const GROUP_LABELS: Record<SidebarGroupType, string> = {
+  benefits: "Benefits",
+  submitAuth: "Submit Auth",
+  authOutstanding: "Auth Outstanding",
+};
 
 interface Props {
   patients: Patient[];
@@ -30,13 +35,14 @@ interface Props {
   onRefresh: () => void;
   activeGroup: SidebarGroupType;
   onGroupChange: (group: SidebarGroupType) => void;
+  showGroupTabs?: boolean;
 }
 
-export function PatientsSidebar({ patients, selectedId, onSelect, loading, error, onRefresh, activeGroup, onGroupChange }: Props) {
+export function PatientsSidebar({ patients, selectedId, onSelect, loading, error, onRefresh, activeGroup, onGroupChange, showGroupTabs = false }: Props) {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
 
-  const activeLabel = GROUP_TABS.find((t) => t.key === activeGroup)?.label ?? "Benefits";
+  const activeLabel = GROUP_LABELS[activeGroup];
 
   return (
     <Sidebar collapsible="icon">
@@ -60,9 +66,9 @@ export function PatientsSidebar({ patients, selectedId, onSelect, loading, error
           </Button>
         </div>
 
-        {!collapsed && (
+        {!collapsed && showGroupTabs && (
           <div className="flex gap-1 mt-2">
-            {GROUP_TABS.map((tab) => (
+            {AUTH_TABS.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => onGroupChange(tab.key)}

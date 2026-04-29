@@ -21,14 +21,29 @@ import { toast } from "sonner";
 import { sendPatientToMonday } from "@/lib/mondayWrite";
 
 const Index = () => {
-  const [activeGroup, setActiveGroup] = useState<SidebarGroup>("benefits");
+  const [mainTab, setMainTab] = useState<"benefits" | "authorizations">("benefits");
+  const [authSubGroup, setAuthSubGroup] = useState<"submitAuth" | "authOutstanding">("submitAuth");
+
+  // Sidebar group is driven by the main tab
+  const activeGroup: SidebarGroup = mainTab === "benefits" ? "benefits" : authSubGroup;
+
   const { patients, loading, error, refetch, update, clearOverlay } = useMondayPatients(activeGroup);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  // Clear selection when switching groups so stale patient doesn't persist
-  const handleGroupChange = (group: SidebarGroup) => {
-    setActiveGroup(group);
+  // When main tab changes, reset selection and default auth sub-group
+  const handleMainTabChange = (tab: string) => {
+    const next = tab as "benefits" | "authorizations";
+    setMainTab(next);
     setSelectedId(null);
+    if (next === "authorizations") setAuthSubGroup("submitAuth");
+  };
+
+  // Switch between Submit Auth / Auth Outstanding within Authorizations
+  const handleAuthSubGroupChange = (group: SidebarGroup) => {
+    if (group === "submitAuth" || group === "authOutstanding") {
+      setAuthSubGroup(group);
+      setSelectedId(null);
+    }
   };
 
   useEffect(() => {
@@ -110,7 +125,8 @@ const Index = () => {
           error={error}
           onRefresh={refetch}
           activeGroup={activeGroup}
-          onGroupChange={handleGroupChange}
+          onGroupChange={handleAuthSubGroupChange}
+          showGroupTabs={mainTab === "authorizations"}
         />
 
         <div className="flex-1 flex flex-col min-w-0">
@@ -155,7 +171,7 @@ const Index = () => {
               )}
 
               {selected && (
-                <Tabs defaultValue="benefits" className="space-y-5">
+                <Tabs value={mainTab} onValueChange={handleMainTabChange} className="space-y-5">
                   <TabsList className="grid w-full max-w-md grid-cols-2">
                     <TabsTrigger value="benefits">Benefits</TabsTrigger>
                     <TabsTrigger value="authorizations">Authorizations</TabsTrigger>
