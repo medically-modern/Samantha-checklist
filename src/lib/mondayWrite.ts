@@ -50,6 +50,8 @@ export async function sendPatientToMonday(p: Patient): Promise<void> {
     })
     .filter((e): e is { cid: ProductCodeId; state: ProductCodeState | undefined } => !!e);
 
+  // Write auth result for served products
+  const servedProductKeys = new Set(entries.map((e) => PRODUCT_CODE_TO_PRODUCT_ID[e.cid]));
   for (const { cid, state } of entries) {
     if (!state?.auth) continue;
     const productId = PRODUCT_CODE_TO_PRODUCT_ID[cid];
@@ -58,6 +60,14 @@ export async function sendPatientToMonday(p: Patient): Promise<void> {
       tasks.push(writeStatusIndex(p.id, authColumnId, AUTH_RESULT_INDEX.required));
     } else if (state.auth === "not-required") {
       tasks.push(writeStatusIndex(p.id, authColumnId, AUTH_RESULT_INDEX.noAuthNeeded));
+    }
+  }
+
+  // Write "Not Serving" for products NOT in this patient's serving type
+  const allProductIds = Object.keys(COL.authResult) as Array<keyof typeof COL.authResult>;
+  for (const prodKey of allProductIds) {
+    if (!servedProductKeys.has(prodKey)) {
+      tasks.push(writeStatusIndex(p.id, COL.authResult[prodKey], AUTH_RESULT_INDEX.notServing));
     }
   }
 
