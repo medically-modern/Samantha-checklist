@@ -9,6 +9,7 @@ import {
 } from "@/lib/workflow";
 import { InsurancePanel } from "@/components/dashboard/InsurancePanel";
 import { AuthorizationsPanel } from "@/components/dashboard/AuthorizationsPanel";
+import { AuthOutstandingPanel } from "@/components/dashboard/AuthOutstandingPanel";
 import { PatientsSidebar } from "@/components/dashboard/PatientsSidebar";
 import { PatientProfileCard } from "@/components/dashboard/PatientProfileCard";
 import { SendToMondayButton } from "@/components/dashboard/SendToMondayButton";
@@ -20,29 +21,17 @@ import { toast } from "sonner";
 import { sendPatientToMonday } from "@/lib/mondayWrite";
 
 const Index = () => {
-  const [mainTab, setMainTab] = useState<"benefits" | "authorizations">("benefits");
-  const [authSubGroup, setAuthSubGroup] = useState<"submitAuth" | "authOutstanding">("submitAuth");
+  const [mainTab, setMainTab] = useState<"benefits" | "authorizations" | "authOutstanding">("benefits");
 
   // Sidebar group is driven by the main tab
-  const activeGroup: SidebarGroup = mainTab === "benefits" ? "benefits" : authSubGroup;
+  const activeGroup: SidebarGroup = mainTab === "authOutstanding" ? "authOutstanding" : mainTab === "authorizations" ? "submitAuth" : "benefits";
 
   const { patients, loading, error, refetch, update, clearOverlay } = useMondayPatients(activeGroup);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  // When main tab changes, reset selection and default auth sub-group
   const handleMainTabChange = (tab: string) => {
-    const next = tab as "benefits" | "authorizations";
-    setMainTab(next);
+    setMainTab(tab as "benefits" | "authorizations" | "authOutstanding");
     setSelectedId(null);
-    if (next === "authorizations") setAuthSubGroup("submitAuth");
-  };
-
-  // Switch between Submit Auth / Auth Outstanding within Authorizations
-  const handleAuthSubGroupChange = (group: SidebarGroup) => {
-    if (group === "submitAuth" || group === "authOutstanding") {
-      setAuthSubGroup(group);
-      setSelectedId(null);
-    }
   };
 
   useEffect(() => {
@@ -105,8 +94,6 @@ const Index = () => {
           error={error}
           onRefresh={refetch}
           activeGroup={activeGroup}
-          onGroupChange={handleAuthSubGroupChange}
-          showGroupTabs={mainTab === "authorizations"}
         />
 
         <Tabs value={mainTab} onValueChange={handleMainTabChange} className="flex-1 flex flex-col min-w-0">
@@ -137,9 +124,10 @@ const Index = () => {
           </header>
 
           <div className="flex justify-center py-3 border-b bg-background">
-            <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsList className="grid w-full max-w-lg grid-cols-3">
               <TabsTrigger value="benefits">Benefits</TabsTrigger>
               <TabsTrigger value="authorizations">Authorizations</TabsTrigger>
+              <TabsTrigger value="authOutstanding">Auth Outstanding</TabsTrigger>
             </TabsList>
           </div>
 
@@ -183,6 +171,16 @@ const Index = () => {
                     <PatientProfileCard patient={selected} showInsuranceContext />
 
                     <AuthorizationsPanel
+                      patient={selected}
+                      onCodeChange={updateCode}
+                    />
+
+                    <SendToMondayButton onSend={handleSend} disabled={!selected} />
+                  </TabsContent>
+                  <TabsContent value="authOutstanding" className="space-y-5 mt-0">
+                    <PatientProfileCard patient={selected} showInsuranceContext />
+
+                    <AuthOutstandingPanel
                       patient={selected}
                       onCodeChange={updateCode}
                     />

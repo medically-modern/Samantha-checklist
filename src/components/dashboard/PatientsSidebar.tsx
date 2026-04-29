@@ -50,7 +50,7 @@ interface Props {
   error: string | null;
   onRefresh: () => void;
   activeGroup: SidebarGroupType;
-  onGroupChange: (group: SidebarGroupType) => void;
+  onGroupChange?: (group: SidebarGroupType) => void;
   showGroupTabs?: boolean;
 }
 
