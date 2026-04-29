@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Package, Repeat, Send, Inbox, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ClinicalsDownloadButton } from "./ClinicalsDownloadButton";
 
 interface Props {
   patient: Patient;
@@ -52,6 +53,7 @@ export function AuthOutstandingPanel({ patient, onCodeChange }: Props) {
             Review submission info and enter approval details for each required product.
           </p>
         </div>
+        <ClinicalsDownloadButton itemId={patient.id} />
       </div>
 
       {!dropdownsReady && (

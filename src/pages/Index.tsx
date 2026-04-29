@@ -126,7 +126,7 @@ const Index = () => {
           <div className="flex justify-center py-3 border-b bg-background">
             <TabsList className="grid w-full max-w-lg grid-cols-3">
               <TabsTrigger value="benefits">Benefits</TabsTrigger>
-              <TabsTrigger value="authorizations">Authorizations</TabsTrigger>
+              <TabsTrigger value="authorizations">Submit Auth</TabsTrigger>
               <TabsTrigger value="authOutstanding">Auth Outstanding</TabsTrigger>
             </TabsList>
           </div>

@@ -318,3 +318,27 @@ export async function writeNumber(itemId: string, columnId: string, num: string)
     value: JSON.stringify(num || ""),
   });
 }
+
+export interface MondayAsset {
+  id: string;
+  name: string;
+  url: string;
+  public_url: string;
+}
+
+/**
+ * Fetch file assets for a specific item (from the Final Clinicals file column).
+ */
+export async function fetchItemAssets(itemId: string): Promise<MondayAsset[]> {
+  const query = `
+    query ($ids: [ID!]!) {
+      items(ids: $ids) {
+        assets { id name url public_url }
+      }
+    }
+  `;
+  const data = await gql<{ items: { assets: MondayAsset[] }[] }>(query, {
+    ids: [itemId],
+  });
+  return data.items?.[0]?.assets ?? [];
+}

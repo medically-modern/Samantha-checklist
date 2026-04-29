@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Package, Repeat, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ClinicalsDownloadButton } from "./ClinicalsDownloadButton";
 
 interface Props {
   patient: Patient;
@@ -48,11 +49,12 @@ export function AuthorizationsPanel({ patient, onCodeChange }: Props) {
     <section className="rounded-xl border bg-card p-5 shadow-card space-y-6">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
-          <h2 className="text-base font-semibold">Authorizations</h2>
+          <h2 className="text-base font-semibold">Submit Auth</h2>
           <p className="text-xs text-muted-foreground">
-            Track auth submissions and outstanding approvals for each required product.
+            Submit auth for each required product.
           </p>
         </div>
+        <ClinicalsDownloadButton itemId={patient.id} />
       </div>
 
       {!dropdownsReady && (
