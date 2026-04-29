@@ -167,12 +167,9 @@ function ProductAuthBlock({ meta, resolved, state, onChange }: BlockProps) {
             </div>
             <div>
               <FieldLabel>Auth ID</FieldLabel>
-              <Input
-                value={state.authId ?? ""}
-                onChange={(e) => onChange({ authId: e.target.value })}
-                placeholder="e.g. AUTH-123456"
-                className="mt-1 h-9 bg-background font-mono text-sm"
-              />
+              <div className="mt-1 h-9 flex items-center px-3 rounded-md border bg-muted text-sm font-mono text-foreground/80">
+                {state.authId || "—"}
+              </div>
             </div>
             {state.authSubmissionMethod === "Carecentrix Portal" && (
               <div className="sm:col-span-2">
@@ -196,9 +193,12 @@ function ProductAuthBlock({ meta, resolved, state, onChange }: BlockProps) {
           <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
             <div className="sm:col-span-5">
               <FieldLabel>Auth ID</FieldLabel>
-              <div className="mt-1 h-9 flex items-center px-3 rounded-md border bg-muted text-sm font-mono text-foreground/80">
-                {state.authId || "—"}
-              </div>
+              <Input
+                value={state.authId ?? ""}
+                onChange={(e) => onChange({ authId: e.target.value })}
+                placeholder="e.g. AUTH-123456"
+                className="mt-1 h-9 bg-background font-mono text-sm"
+              />
             </div>
             <div className="sm:col-span-2">
               <FieldLabel>Auth Start</FieldLabel>
