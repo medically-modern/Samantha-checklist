@@ -194,6 +194,12 @@ function ProductAuthBlock({ meta, resolved, state, onChange }: BlockProps) {
           tone="waiting"
         >
           <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+            <div className="sm:col-span-5">
+              <FieldLabel>Auth ID</FieldLabel>
+              <div className="mt-1 h-9 flex items-center px-3 rounded-md border bg-muted text-sm font-mono text-foreground/80">
+                {state.authId || "—"}
+              </div>
+            </div>
             <div className="sm:col-span-2">
               <FieldLabel>Auth Start</FieldLabel>
               <Input

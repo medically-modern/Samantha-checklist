@@ -4,6 +4,16 @@ import type { Patient, InsuranceState, ProductCodeState, ProductCodeId, Universa
 import type { PrimaryInsurance, Serving, ProductId } from "./hcpcRules";
 import { PRIMARY_INSURANCE_OPTIONS, SERVING_OPTIONS } from "./hcpcRules";
 import { COL, type MondayItem } from "./mondayApi";
+// Reverse: Monday dropdown text → AuthSubmissionMethod
+import type { AuthSubmissionMethod } from "./workflow";
+import { AUTH_SUBMISSION_METHODS } from "./workflow";
+
+function parseAuthMethod(text: string | null | undefined): AuthSubmissionMethod {
+  if (!text) return "";
+  const norm = text.trim();
+  return (AUTH_SUBMISSION_METHODS.find((m) => m.toLowerCase() === norm.toLowerCase()) as AuthSubmissionMethod) ?? "";
+}
+
 
 // Universal-check write indices
 export const UNIVERSAL_INDEX = {
@@ -145,6 +155,53 @@ export function mondayItemToPatient(item: MondayItem): Patient {
         // Store original Monday label for read-only display
         _mondayAuthLabel: text.trim(),
       } as ProductCodeState;
+    }
+  }
+
+  // Parse per-product submission fields from Monday (method, date, authId, start, end, units)
+  const PRODUCT_KEYS: ProductId[] = ["monitor", "sensors", "insulin_pump", "infusion_set", "cartridge"];
+  const PRODUCT_KEY_TO_CODE: Record<ProductId, ProductCodeId> = {
+    monitor: "cgm-monitor",
+    sensors: "cgm-sensors",
+    insulin_pump: "pump",
+    infusion_set: "infusion-sets",
+    cartridge: "cartridges",
+  };
+  for (const pk of PRODUCT_KEYS) {
+    const codeId = PRODUCT_KEY_TO_CODE[pk];
+    // Ensure entry exists (auth result parsing may have created it already)
+    if (!codes[codeId]) {
+      codes[codeId] = { status: "pending" } as ProductCodeState;
+    }
+    const existing = codes[codeId]!;
+
+    const method = parseAuthMethod(cv(COL.authMethod[pk])?.text);
+    if (method) existing.authSubmissionMethod = method;
+
+    const authId = cv(COL.authId[pk])?.text;
+    if (authId) existing.authId = authId;
+
+    const subDate = cv(COL.authSubmissionDate[pk])?.text;
+    if (subDate) existing.authSubmissionDate = subDate;
+
+    const authStart = cv(COL.authStart[pk])?.text;
+    if (authStart) existing.authStart = authStart;
+
+    const authEnd = cv(COL.authEnd[pk])?.text;
+    if (authEnd) existing.authEnd = authEnd;
+
+    const authUnits = cv(COL.authUnits[pk])?.text;
+    if (authUnits) existing.authUnits = authUnits;
+  }
+
+  // Carecentrix Intake ID (single shared column)
+  const intakeText = cv(COL.carecentrixIntakeId)?.text;
+  if (intakeText) {
+    // Apply to all product codes that use Carecentrix
+    for (const codeId of Object.keys(codes) as ProductCodeId[]) {
+      if (codes[codeId]?.authSubmissionMethod === "Carecentrix Portal") {
+        codes[codeId]!.intakeId = intakeText;
+      }
     }
   }
 
