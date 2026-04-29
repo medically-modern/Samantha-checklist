@@ -414,6 +414,15 @@ export async function sendPatientToMonday(p: Patient, context: "benefits" | "sub
     }
   }
 
+  // ----- Carecentrix Intake ID (single shared text column) -----
+  // All products share one column; write the first non-empty intakeId found
+  const intakeId = entries
+    .map((e) => e.state?.intakeId)
+    .find((v) => !!v);
+  if (intakeId) {
+    tasks.push(writeText(p.id, COL.carecentrixIntakeId, intakeId));
+  }
+
   // ----- Notes (long text) -----
   if (typeof p.notes === "string") {
     tasks.push({
