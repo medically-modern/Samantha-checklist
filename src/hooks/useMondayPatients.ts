@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Patient } from "@/lib/workflow";
-import { fetchGroupItems, hasToken } from "@/lib/mondayApi";
+import { fetchGroupItems, GROUPS, hasToken } from "@/lib/mondayApi";
 import { mondayItemToPatient } from "@/lib/mondayMapping";
 
 const POLL_MS = 30_000;
 
-export function useMondayPatients() {
+export type SidebarGroup = "benefits" | "submitAuth" | "authOutstanding";
+
+export function useMondayPatients(activeGroup: SidebarGroup = "benefits") {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +29,8 @@ export function useMondayPatients() {
       setError(null);
     }
     try {
-      const items = await fetchGroupItems();
+      const groupId = GROUPS[activeGroup];
+      const items = await fetchGroupItems(groupId);
       if (!mountedRef.current) return;
       const safeItems = Array.isArray(items) ? items : [];
       const ps = safeItems.map(mondayItemToPatient);
@@ -42,7 +45,7 @@ export function useMondayPatients() {
     } finally {
       if (mountedRef.current) setLoading(false);
     }
-  }, []);
+  }, [activeGroup]);
 
   useEffect(() => {
     mountedRef.current = true;

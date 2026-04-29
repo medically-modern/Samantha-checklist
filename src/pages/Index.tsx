@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useMondayPatients } from "@/hooks/useMondayPatients";
+import { useMondayPatients, type SidebarGroup } from "@/hooks/useMondayPatients";
 import {
   Patient,
   ProductCodeId,
@@ -21,8 +21,15 @@ import { toast } from "sonner";
 import { sendPatientToMonday } from "@/lib/mondayWrite";
 
 const Index = () => {
-  const { patients, loading, error, refetch, update, clearOverlay } = useMondayPatients();
+  const [activeGroup, setActiveGroup] = useState<SidebarGroup>("benefits");
+  const { patients, loading, error, refetch, update, clearOverlay } = useMondayPatients(activeGroup);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // Clear selection when switching groups so stale patient doesn't persist
+  const handleGroupChange = (group: SidebarGroup) => {
+    setActiveGroup(group);
+    setSelectedId(null);
+  };
 
   useEffect(() => {
     if (!selectedId && patients.length > 0) setSelectedId(patients[0].id);
@@ -102,6 +109,8 @@ const Index = () => {
           loading={loading}
           error={error}
           onRefresh={refetch}
+          activeGroup={activeGroup}
+          onGroupChange={handleGroupChange}
         />
 
         <div className="flex-1 flex flex-col min-w-0">

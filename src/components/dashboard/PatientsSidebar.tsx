@@ -1,10 +1,8 @@
-import { NavLink } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -14,7 +12,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Loader2, RefreshCw, User, AlertCircle } from "lucide-react";
 import type { Patient } from "@/lib/workflow";
+import type { SidebarGroup as SidebarGroupType } from "@/hooks/useMondayPatients";
 import { cn } from "@/lib/utils";
+
+const GROUP_TABS: { key: SidebarGroupType; label: string; shortLabel: string }[] = [
+  { key: "benefits", label: "Benefits", shortLabel: "Ben" },
+  { key: "submitAuth", label: "Submit Auth", shortLabel: "Sub" },
+  { key: "authOutstanding", label: "Auth Outstanding", shortLabel: "Out" },
+];
 
 interface Props {
   patients: Patient[];
@@ -23,11 +28,15 @@ interface Props {
   loading: boolean;
   error: string | null;
   onRefresh: () => void;
+  activeGroup: SidebarGroupType;
+  onGroupChange: (group: SidebarGroupType) => void;
 }
 
-export function PatientsSidebar({ patients, selectedId, onSelect, loading, error, onRefresh }: Props) {
+export function PatientsSidebar({ patients, selectedId, onSelect, loading, error, onRefresh, activeGroup, onGroupChange }: Props) {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
+
+  const activeLabel = GROUP_TABS.find((t) => t.key === activeGroup)?.label ?? "Benefits";
 
   return (
     <Sidebar collapsible="icon">
@@ -35,7 +44,7 @@ export function PatientsSidebar({ patients, selectedId, onSelect, loading, error
         <div className="flex items-center justify-between gap-2">
           {!collapsed && (
             <div className="min-w-0">
-              <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Monday · Benefits</p>
+              <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Monday · {activeLabel}</p>
               <p className="text-sm font-semibold truncate">Patients ({patients.length})</p>
             </div>
           )}
@@ -50,6 +59,25 @@ export function PatientsSidebar({ patients, selectedId, onSelect, loading, error
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
           </Button>
         </div>
+
+        {!collapsed && (
+          <div className="flex gap-1 mt-2">
+            {GROUP_TABS.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => onGroupChange(tab.key)}
+                className={cn(
+                  "flex-1 text-[10px] font-medium py-1 px-1 rounded transition-colors truncate",
+                  activeGroup === tab.key
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80",
+                )}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        )}
       </SidebarHeader>
 
       <SidebarContent>
@@ -61,7 +89,6 @@ export function PatientsSidebar({ patients, selectedId, onSelect, loading, error
         )}
 
         <SidebarGroup>
-          {!collapsed && <SidebarGroupLabel>Benefits group</SidebarGroupLabel>}
           <SidebarGroupContent>
             <SidebarMenu>
               {patients.map((p) => (
@@ -87,7 +114,7 @@ export function PatientsSidebar({ patients, selectedId, onSelect, loading, error
                 </SidebarMenuItem>
               ))}
               {!loading && patients.length === 0 && !error && !collapsed && (
-                <p className="px-3 py-4 text-xs text-muted-foreground">No patients in Benefits group.</p>
+                <p className="px-3 py-4 text-xs text-muted-foreground">No patients in {activeLabel} group.</p>
               )}
             </SidebarMenu>
           </SidebarGroupContent>
