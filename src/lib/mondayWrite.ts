@@ -109,7 +109,7 @@ export async function sendPatientToMonday(p: Patient, context: "benefits" | "sub
   // ----- Escalation + Stage Advancer -----
   if (context === "submitAuth") {
     // Submit Auth tab always sets stage to Submit Auth
-    tasks.push(writeStatusIndex(p.id, COL.stageAdvancer, STAGE_INDEX.authorization));
+    tasks.push(writeStatusIndex(p.id, COL.stageAdvancer, STAGE_INDEX.authOutstanding));
   } else if (context === "authOutstanding") {
     // Auth Outstanding tab sets stage to Auth Outstanding
     tasks.push(writeStatusIndex(p.id, COL.stageAdvancer, STAGE_INDEX.authOutstanding));
@@ -122,7 +122,7 @@ export async function sendPatientToMonday(p: Patient, context: "benefits" | "sub
     } else if (outcome === "all-clear") {
       tasks.push(writeStatusIndex(p.id, COL.stageAdvancer, STAGE_INDEX.complete));
     } else if (outcome === "auth-required") {
-      tasks.push(writeStatusIndex(p.id, COL.stageAdvancer, STAGE_INDEX.authorization));
+      tasks.push(writeStatusIndex(p.id, COL.stageAdvancer, STAGE_INDEX.authOutstanding));
     } else {
       tasks.push(writeStatusIndex(p.id, COL.stageAdvancer, STAGE_INDEX.benefitsSos));
     }
