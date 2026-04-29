@@ -155,10 +155,9 @@ export async function sendPatientToMonday(p: Patient): Promise<void> {
   }
 
   // ----- Carecentrix Intake ID (single shared text column) -----
-  // All products share one column; write the first non-empty intakeId found
-  const intakeId = entries
-    .map((e) => e.state?.intakeId)
-    .find((v) => !!v);
+  // Check all product codes (not just resolved entries) for a non-empty intakeId
+  const allCodeStates = Object.values(ins.codes).filter(Boolean) as ProductCodeState[];
+  const intakeId = allCodeStates.map((s) => s.intakeId).find((v) => !!v);
   if (intakeId) {
     tasks.push(writeText(p.id, COL.carecentrixIntakeId, intakeId));
   }
