@@ -240,7 +240,7 @@ export async function sendPatientToMonday(p: Patient, context: "benefits" | "sub
       tasks.push({
         label: "Stage Advancer",
         columnId: COL.stageAdvancer,
-        fn: () => writeStatusIndex(p.id, COL.stageAdvancer, STAGE_INDEX.authOutstanding),
+        fn: () => writeStatusIndex(p.id, COL.stageAdvancer, STAGE_INDEX.authorization),
       });
     } else {
       tasks.push({
