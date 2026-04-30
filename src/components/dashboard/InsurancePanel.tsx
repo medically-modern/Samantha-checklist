@@ -51,11 +51,12 @@ export function InsurancePanel({
   const ins = patient.insurance ?? EMPTY_INSURANCE;
   const universalDone = Object.values(ins.universal).every((v) => v === "confirmed");
   const universalCount = Object.values(ins.universal).filter((v) => v === "confirmed").length;
-  const outcome = deriveInsuranceOutcome(ins);
 
   const serving = patient.serving || "";
   const primaryInsurance = patient.primaryInsurance || "";
   const resolved: ResolvedProduct[] = resolveHcpcs(primaryInsurance || null, serving || null);
+  const servedCodeIds = resolved.map((r) => PRODUCT_TO_CODE_ID[r.product]);
+  const outcome = deriveInsuranceOutcome(ins, servedCodeIds);
   const dropdownsReady = !!serving && !!primaryInsurance;
 
   return (

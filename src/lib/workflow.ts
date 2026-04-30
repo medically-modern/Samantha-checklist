@@ -402,7 +402,7 @@ export interface Patient {
   memberId2?: string;
 }
 
-export function deriveInsuranceOutcome(ins?: InsuranceState):
+export function deriveInsuranceOutcome(ins?: InsuranceState, servedCodeIds?: ProductCodeId[]):
   | "incomplete"
   | "all-clear"
   | "auth-required"
@@ -411,7 +411,10 @@ export function deriveInsuranceOutcome(ins?: InsuranceState):
   const uVals = Object.values(ins.universal);
   const universalAllConfirmed = uVals.every((v) => v === "confirmed");
   const anyUniversalNotConfirmed = uVals.some((v) => v === "not-confirmed");
-  const codeStates = (Object.values(ins.codes).filter(Boolean) as ProductCodeState[]).filter(c => c.auth || c.sos);
+  // Only consider served products if provided; otherwise fall back to all non-empty codes
+  const codeStates = servedCodeIds
+    ? (servedCodeIds.map((id) => ins.codes[id]).filter(Boolean) as ProductCodeState[])
+    : (Object.values(ins.codes).filter(Boolean) as ProductCodeState[]).filter(c => c.auth || c.sos);
   const anyProductFilled = codeStates.some((c) => c.auth || c.sos);
   // Nothing started yet
   if (codeStates.length === 0 && !anyProductFilled && uVals.every((v) => !v)) return "incomplete";

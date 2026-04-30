@@ -206,7 +206,7 @@ export async function sendPatientToMonday(p: Patient, context: "benefits" | "sub
 
   // ----- Debug: trace deriveInsuranceOutcome -----
   {
-    const _outcome = deriveInsuranceOutcome(ins);
+    const _outcome = deriveInsuranceOutcome(ins, entries.map(e => e.cid));
     const _codeStates = Object.values(ins.codes).filter(Boolean);
     console.log('[mondayWrite] context:', context);
     console.log('[mondayWrite] universal:', JSON.stringify(ins.universal));
@@ -229,7 +229,7 @@ export async function sendPatientToMonday(p: Patient, context: "benefits" | "sub
       fn: () => writeStatusIndex(p.id, COL.stageAdvancer, STAGE_INDEX.authOutstanding),
     });
   } else {
-    const outcome = deriveInsuranceOutcome(ins);
+    const outcome = deriveInsuranceOutcome(ins, entries.map(e => e.cid));
     if (outcome === "blocker") {
       tasks.push({
         label: "Escalation",
