@@ -336,13 +336,23 @@ export async function sendPatientToMonday(p: Patient, context: "benefits" | "sub
 
   // ----- Auth Outstanding: per-product auth result (Auth Valid / Denied) -----
   if (context === "authOutstanding") {
+    console.log('[mondayWrite] authOutstanding entries:', entries.map(e => ({
+      cid: e.cid,
+      product: PRODUCT_CODE_TO_PRODUCT_ID[e.cid],
+      authOutstandingResult: e.state?.authOutstandingResult,
+      authColumnId: COL.authResult[PRODUCT_CODE_TO_PRODUCT_ID[e.cid]],
+    })));
     for (const { cid, state } of entries) {
-      if (!state?.authOutstandingResult) continue;
+      if (!state?.authOutstandingResult) {
+        console.log(`[mondayWrite] SKIPPED ${cid}: no authOutstandingResult`, state);
+        continue;
+      }
       const productId = PRODUCT_CODE_TO_PRODUCT_ID[cid];
       const authColumnId = COL.authResult[productId];
       const resultIndex = state.authOutstandingResult === "auth-valid"
         ? AUTH_RESULT_INDEX.authValid
         : AUTH_RESULT_INDEX.denied;
+      console.log(`[mondayWrite] WRITING auth result: ${productId} → index ${resultIndex} (col: ${authColumnId})`);
       tasks.push({
         label: `Auth result: ${productId}`,
         columnId: authColumnId,
