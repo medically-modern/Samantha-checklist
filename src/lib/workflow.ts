@@ -411,7 +411,7 @@ export function deriveInsuranceOutcome(ins?: InsuranceState):
   const uVals = Object.values(ins.universal);
   const universalAllConfirmed = uVals.every((v) => v === "confirmed");
   const anyUniversalNotConfirmed = uVals.some((v) => v === "not-confirmed");
-  const codeStates = Object.values(ins.codes).filter(Boolean) as ProductCodeState[];
+  const codeStates = (Object.values(ins.codes).filter(Boolean) as ProductCodeState[]).filter(c => c.auth || c.sos);
   const anyProductFilled = codeStates.some((c) => c.auth || c.sos);
   // Nothing started yet
   if (codeStates.length === 0 && !anyProductFilled && uVals.every((v) => !v)) return "incomplete";
