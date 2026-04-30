@@ -204,6 +204,17 @@ export async function sendPatientToMonday(p: Patient, context: "benefits" | "sub
     }
   }
 
+  // ----- Debug: trace deriveInsuranceOutcome -----
+  {
+    const _outcome = deriveInsuranceOutcome(ins);
+    const _codeStates = Object.values(ins.codes).filter(Boolean);
+    console.log('[mondayWrite] context:', context);
+    console.log('[mondayWrite] universal:', JSON.stringify(ins.universal));
+    console.log('[mondayWrite] codeStates:', JSON.stringify(_codeStates.map((c: any) => ({ auth: c.auth, sos: c.sos }))));
+    console.log('[mondayWrite] entries:', JSON.stringify(entries.map(e => ({ cid: e.cid, auth: e.state?.auth, sos: e.state?.sos }))));
+    console.log('[mondayWrite] deriveInsuranceOutcome =>', _outcome);
+  }
+
   // ----- Escalation + Stage Advancer -----
   if (context === "submitAuth") {
     tasks.push({
