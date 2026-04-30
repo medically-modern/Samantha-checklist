@@ -172,7 +172,7 @@ const Index = () => {
                       </p>
                     </div>
 
-                    <div class="flex items-center gap-3">
+                    <div className="flex items-center gap-3">
                       <Button
                       onClick={toggleEscalate}
                       variant={selected.escalated ? "destructive" : "outline"}
@@ -195,7 +195,7 @@ const Index = () => {
                       onCodeChange={updateCode}
                     />
 
-                    <div class="flex items-center gap-3">
+                    <div className="flex items-center gap-3">
                       <Button
                       onClick={toggleEscalate}
                       variant={selected.escalated ? "destructive" : "outline"}
@@ -217,7 +217,7 @@ const Index = () => {
                       onCodeChange={updateCode}
                     />
 
-                    <div class="flex items-center gap-3">
+                    <div className="flex items-center gap-3">
                       <Button
                       onClick={toggleEscalate}
                       variant={selected.escalated ? "destructive" : "outline"}
