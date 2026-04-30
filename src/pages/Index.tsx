@@ -16,7 +16,7 @@ import { SendToMondayButton } from "@/components/dashboard/SendToMondayButton";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { RotateCcw, Stethoscope } from "lucide-react";
+import { AlertTriangle, RotateCcw, Stethoscope } from "lucide-react";
 import { toast } from "sonner";
 import { sendPatientToMonday } from "@/lib/mondayWrite";
 
@@ -70,6 +70,11 @@ const Index = () => {
     });
     toast.success("Cleared local edits — refetching from Monday");
     refetch();
+  };
+
+  const toggleEscalate = () => {
+    if (!selected) return;
+    update(selected.id, { escalated: !selected.escalated });
   };
 
   const handleSend = async () => {
@@ -167,6 +172,18 @@ const Index = () => {
                       </p>
                     </div>
 
+                    <div class="flex items-center gap-3">
+                      <Button
+                      onClick={toggleEscalate}
+                      variant={selected.escalated ? "destructive" : "outline"}
+                      className={selected.escalated
+                        ? "gap-2 bg-red-600 hover:bg-red-700 text-white shadow-md"
+                        : "gap-2 border-red-300 text-red-600 hover:bg-red-50"}
+                    >
+                      <AlertTriangle className="h-4 w-4" />
+                      {selected.escalated ? "Escalation Required" : "Escalate"}
+                    </Button>
+                    </div>
                     <SendToMondayButton onSend={handleSend} disabled={!selected} />
                   </TabsContent>
 
@@ -178,6 +195,18 @@ const Index = () => {
                       onCodeChange={updateCode}
                     />
 
+                    <div class="flex items-center gap-3">
+                      <Button
+                      onClick={toggleEscalate}
+                      variant={selected.escalated ? "destructive" : "outline"}
+                      className={selected.escalated
+                        ? "gap-2 bg-red-600 hover:bg-red-700 text-white shadow-md"
+                        : "gap-2 border-red-300 text-red-600 hover:bg-red-50"}
+                    >
+                      <AlertTriangle className="h-4 w-4" />
+                      {selected.escalated ? "Escalation Required" : "Escalate"}
+                    </Button>
+                    </div>
                     <SendToMondayButton onSend={handleSend} disabled={!selected} />
                   </TabsContent>
                   <TabsContent value="authOutstanding" className="space-y-5 mt-0">
@@ -188,6 +217,18 @@ const Index = () => {
                       onCodeChange={updateCode}
                     />
 
+                    <div class="flex items-center gap-3">
+                      <Button
+                      onClick={toggleEscalate}
+                      variant={selected.escalated ? "destructive" : "outline"}
+                      className={selected.escalated
+                        ? "gap-2 bg-red-600 hover:bg-red-700 text-white shadow-md"
+                        : "gap-2 border-red-300 text-red-600 hover:bg-red-50"}
+                    >
+                      <AlertTriangle className="h-4 w-4" />
+                      {selected.escalated ? "Escalation Required" : "Escalate"}
+                    </Button>
+                    </div>
                     <SendToMondayButton onSend={handleSend} disabled={!selected} />
                   </TabsContent>
                 </>

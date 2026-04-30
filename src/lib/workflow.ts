@@ -400,6 +400,7 @@ export interface Patient {
   primaryInsurance?: PrimaryInsurance | "";
   memberId1?: string;
   memberId2?: string;
+  escalated?: boolean;
 }
 
 export function deriveInsuranceOutcome(ins?: InsuranceState, servedCodeIds?: ProductCodeId[]):
