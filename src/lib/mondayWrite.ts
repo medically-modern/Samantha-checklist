@@ -114,8 +114,9 @@ export async function sendPatientToMonday(p: Patient, context: "benefits" | "sub
     })
     .filter((e): e is { cid: ProductCodeId; state: ProductCodeState | undefined } => !!e);
 
-  // Write auth result for served products
+  // Write auth result for served products (skip for authOutstanding — handled separately below)
   const servedProductKeys = new Set(entries.map((e) => PRODUCT_CODE_TO_PRODUCT_ID[e.cid]));
+  if (context !== "authOutstanding") {
   for (const { cid, state } of entries) {
     if (!state?.auth) continue;
     const productId = PRODUCT_CODE_TO_PRODUCT_ID[cid];
@@ -143,6 +144,7 @@ export async function sendPatientToMonday(p: Patient, context: "benefits" | "sub
         fn: () => writeStatusIndex(p.id, authColumnId, AUTH_RESULT_INDEX.noAuthNeeded),
       });
     }
+  }
   }
 
   // Write "Not Serving" for products NOT in this patient's serving type

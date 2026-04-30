@@ -62,9 +62,9 @@ export const AUTH_RESULT_INDEX = {
 // Auth Method dropdown option IDs on Monday (per-product dropdown columns)
 export const AUTH_METHOD_OPTION_ID: Record<string, number> = {
   "Availity Portal": 1,
-  "Call": 2,
-  "Fax": 3,
-  "Payer Portal": 4,
+  "Fax": 2,
+  "Payer Portal": 5,
+  "Call": 6,
 };
 export const PRODUCT_CODE_TO_PRODUCT_ID: Record<ProductCodeId, ProductId> = {
   "cgm-monitor": "monitor",
