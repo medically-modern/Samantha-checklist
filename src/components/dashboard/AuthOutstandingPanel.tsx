@@ -204,7 +204,12 @@ function ProductAuthBlock({ meta, resolved, state, onChange, primaryInsurance }:
                   onChange({ authOutstandingResult: (v === "__none__" ? "" : v) as "auth-valid" | "denied" | "" })
                 }
               >
-                <SelectTrigger className="mt-1 h-9 bg-background font-medium">
+                <SelectTrigger className={cn(
+                  "mt-1 h-9 font-medium",
+                  state.authOutstandingResult === "auth-valid" && "bg-green-50 border-green-400 text-green-700",
+                  state.authOutstandingResult === "denied" && "bg-red-50 border-red-400 text-red-700",
+                  !state.authOutstandingResult && "bg-background",
+                )}>
                   <SelectValue placeholder="Select result…" />
                 </SelectTrigger>
                 <SelectContent>
