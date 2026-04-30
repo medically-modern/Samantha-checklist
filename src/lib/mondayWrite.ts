@@ -334,6 +334,23 @@ export async function sendPatientToMonday(p: Patient, context: "benefits" | "sub
     }
   }
 
+  // ----- Auth Outstanding: per-product auth result (Auth Valid / Denied) -----
+  if (context === "authOutstanding") {
+    for (const { cid, state } of entries) {
+      if (!state?.authOutstandingResult) continue;
+      const productId = PRODUCT_CODE_TO_PRODUCT_ID[cid];
+      const authColumnId = COL.authResult[productId];
+      const resultIndex = state.authOutstandingResult === "auth-valid"
+        ? AUTH_RESULT_INDEX.authValid
+        : AUTH_RESULT_INDEX.denied;
+      tasks.push({
+        label: `Auth result: ${productId}`,
+        columnId: authColumnId,
+        fn: () => writeStatusIndex(p.id, authColumnId, resultIndex),
+      });
+    }
+  }
+
   // ----- Carecentrix Intake ID (single shared text column) -----
   const allCodeStates = Object.values(ins.codes).filter(Boolean) as ProductCodeState[];
   const intakeId = allCodeStates.map((s) => s.intakeId).find((v) => !!v);

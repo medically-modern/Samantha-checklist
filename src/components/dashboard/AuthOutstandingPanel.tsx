@@ -14,6 +14,7 @@ import {
   type ResolvedProduct,
 } from "@/lib/hcpcRules";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Package, Repeat, Send, Inbox, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ClinicalsDownloadButton } from "./ClinicalsDownloadButton";
@@ -195,6 +196,24 @@ function ProductAuthBlock({ meta, resolved, state, onChange, primaryInsurance }:
           tone="waiting"
         >
           <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+            <div className="sm:col-span-5">
+              <FieldLabel>Auth Result</FieldLabel>
+              <Select
+                value={state.authOutstandingResult || "__none__"}
+                onValueChange={(v) =>
+                  onChange({ authOutstandingResult: (v === "__none__" ? "" : v) as "auth-valid" | "denied" | "" })
+                }
+              >
+                <SelectTrigger className="mt-1 h-9 bg-background font-medium">
+                  <SelectValue placeholder="Select result…" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— Select —</SelectItem>
+                  <SelectItem value="auth-valid">Auth Valid</SelectItem>
+                  <SelectItem value="denied">Denied</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="sm:col-span-5">
               <FieldLabel>Auth ID</FieldLabel>
               <Input
