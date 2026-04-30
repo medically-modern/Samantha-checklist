@@ -125,7 +125,7 @@ const Index = () => {
                   disabled={!selected}
                   className="gap-2 bg-white text-navy hover:bg-white/90 shadow-elevate"
                 >
-                  <RotateCcw className="h-4 w-4" /> Reset for new patient
+                  <RotateCcw className="h-4 w-4" /> Reset
                 </Button>
               </div>
             </div>
