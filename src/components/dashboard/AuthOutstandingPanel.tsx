@@ -93,6 +93,7 @@ export function AuthOutstandingPanel({ patient, onCodeChange }: Props) {
                 resolved={r}
                 state={state}
                 onChange={(patch) => onCodeChange(codeId, patch)}
+                primaryInsurance={primaryInsurance}
               />
             );
           })}
@@ -107,9 +108,10 @@ interface BlockProps {
   resolved: ResolvedProduct;
   state: ProductCodeState;
   onChange: (patch: Partial<ProductCodeState>) => void;
+  primaryInsurance: string;
 }
 
-function ProductAuthBlock({ meta, resolved, state, onChange }: BlockProps) {
+function ProductAuthBlock({ meta, resolved, state, onChange, primaryInsurance }: BlockProps) {
   const isRecurring = meta.cadence === "RECURRING";
 
   return (
@@ -173,7 +175,7 @@ function ProductAuthBlock({ meta, resolved, state, onChange }: BlockProps) {
                 {state.authId || "—"}
               </div>
             </div>
-            {state.authSubmissionMethod === "Carecentrix Portal" && (
+            {primaryInsurance === "Horizon BCBS" && state.authSubmissionMethod === "Payer Portal" && (
               <div className="sm:col-span-2">
                 <FieldLabel>Intake ID · Carecentrix</FieldLabel>
                 <div className="mt-1 h-9 flex items-center px-3 rounded-md border bg-muted text-sm font-mono text-foreground/80">
