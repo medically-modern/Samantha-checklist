@@ -288,23 +288,15 @@ export type SosChoice = "" | "clear" | "not-clear" | "skip";
 export type AuthSubmissionMethod =
   | ""
   | "Availity Portal"
+  | "Call"
   | "Fax"
-  | "United Portal"
-  | "Fidelis Portal"
-  | "Carecentrix Portal"
-  | "Magnacare Portal"
-  | "UMR Portal"
-  | "E-paces";
+  | "Payer Portal";
 
 export const AUTH_SUBMISSION_METHODS: Exclude<AuthSubmissionMethod, "">[] = [
   "Availity Portal",
+  "Call",
   "Fax",
-  "United Portal",
-  "Fidelis Portal",
-  "Carecentrix Portal",
-  "Magnacare Portal",
-  "UMR Portal",
-  "E-paces",
+  "Payer Portal",
 ];
 
 export interface ProductCodeState {
