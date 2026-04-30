@@ -135,7 +135,8 @@ export async function sendPatientToMonday(p: Patient, context: "benefits" | "sub
           fn: () => writeStatusIndex(p.id, authColumnId, AUTH_RESULT_INDEX.required),
         });
       }
-    } else if (state.auth === "not-required") {
+    } else if (state.auth === "not-required" && context !== "submitAuth") {
+      // Skip when in submit-auth flow — leave non-auth-required results untouched
       tasks.push({
         label: `Auth result: ${productId}`,
         columnId: authColumnId,
@@ -145,14 +146,17 @@ export async function sendPatientToMonday(p: Patient, context: "benefits" | "sub
   }
 
   // Write "Not Serving" for products NOT in this patient's serving type
-  const allProductIds = Object.keys(COL.authResult) as Array<keyof typeof COL.authResult>;
-  for (const prodKey of allProductIds) {
-    if (!servedProductKeys.has(prodKey)) {
-      tasks.push({
-        label: `Auth result: ${prodKey} (not serving)`,
-        columnId: COL.authResult[prodKey],
-        fn: () => writeStatusIndex(p.id, COL.authResult[prodKey], AUTH_RESULT_INDEX.notServing),
-      });
+  // Skip when in submit-auth flow — leave other auth results untouched
+  if (context !== "submitAuth") {
+    const allProductIds = Object.keys(COL.authResult) as Array<keyof typeof COL.authResult>;
+    for (const prodKey of allProductIds) {
+      if (!servedProductKeys.has(prodKey)) {
+        tasks.push({
+          label: `Auth result: ${prodKey} (not serving)`,
+          columnId: COL.authResult[prodKey],
+          fn: () => writeStatusIndex(p.id, COL.authResult[prodKey], AUTH_RESULT_INDEX.notServing),
+        });
+      }
     }
   }
 
