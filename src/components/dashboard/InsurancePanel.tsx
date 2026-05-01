@@ -513,9 +513,11 @@ function deriveMondayColumns(patient: Patient, resolved: ResolvedProduct[]) {
   }
 
   // 7) Escalation column
-  // Escalate if any universal explicitly not confirmed, or SoS not clear (when filled)
-  const shouldEscalate =
-    anyUniversalNotConfirmed || (allFilled && anyNotClear);
+  // Eager: escalate as soon as any universal is "Not Confirmed" or any
+  // product's SoS is "Not Clear" — even if other products aren't filled
+  // yet. The Send-to-Monday guard prevents incomplete submits, so this
+  // only affects what the preview shows during data entry.
+  const shouldEscalate = anyUniversalNotConfirmed || anyNotClear;
   const escalation = shouldEscalate ? "Escalation Required" : "—";
 
   return {

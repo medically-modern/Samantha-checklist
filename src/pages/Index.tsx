@@ -19,6 +19,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AlertTriangle, RotateCcw, Stethoscope } from "lucide-react";
 import { toast } from "sonner";
 import { sendPatientToMonday } from "@/lib/mondayWrite";
+import { validateBenefitsForSubmit } from "@/lib/workflow";
 
 const Index = () => {
   const [mainTab, setMainTab] = useState<"benefits" | "authorizations" | "authOutstanding">("benefits");
@@ -82,6 +83,20 @@ const Index = () => {
     const context = mainTab === "authorizations" ? "submitAuth" as const
       : mainTab === "authOutstanding" ? "authOutstanding" as const
       : "benefits" as const;
+
+    // Benefits tab: block submit if any required field on Step 1 (universal
+    // checks) or Step 2 (per-product Auth + SoS) is empty. Surfaces a toast
+    // listing the missing fields so Samantha knows exactly what to fix.
+    if (context === "benefits") {
+      const missing = validateBenefitsForSubmit(selected);
+      if (missing.length > 0) {
+        toast.error("Can't send — missing fields", {
+          description: missing.join(" · "),
+        });
+        return;
+      }
+    }
+
     try {
       await sendPatientToMonday(selected, context);
       toast.success("Sent to Monday");

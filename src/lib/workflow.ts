@@ -1,7 +1,14 @@
 // Medically Modern · Medical Evaluation Workflow data model
 // Source of truth for stages, pillars, coverage pathways, and chase protocols.
 
-import type { PrimaryInsurance, Serving } from "./hcpcRules";
+import {
+  isAutoFilledMedicaidSupply,
+  PRODUCT_LABELS,
+  resolveHcpcs,
+  type PrimaryInsurance,
+  type ProductId,
+  type Serving,
+} from "./hcpcRules";
 
 export type StageId =
   | "intake"
@@ -433,5 +440,62 @@ export function deriveInsuranceOutcome(ins?: InsuranceState, servedCodeIds?: Pro
   // Auths required is fine — not an escalation
   if (codeStates.some((c) => c.auth === "required")) return "auth-required";
   return "all-clear";
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Benefits-tab submit validation
+// ─────────────────────────────────────────────────────────────────────
+
+const PRODUCT_TO_CODE_ID_VALIDATOR: Record<ProductId, ProductCodeId> = {
+  monitor: "cgm-monitor",
+  sensors: "cgm-sensors",
+  insulin_pump: "pump",
+  infusion_set: "infusion-sets",
+  cartridge: "cartridges",
+};
+
+const UNIVERSAL_LABELS: Record<string, string> = {
+  "in-network": "In-Network Confirmed",
+  "active": "Insurance Active",
+  "dme-benefits": "DME Benefits Confirmed",
+};
+
+/**
+ * Returns a list of human-readable labels for fields that are required
+ * but not yet filled on the Benefits tab. Empty array means the patient
+ * is ready to Send to Monday.
+ *
+ * Rules (in lockstep with InsurancePanel.tsx):
+ *   - All 3 universal checks must be picked (Confirmed or Not Confirmed).
+ *   - Each VISIBLE served product (Medicaid-routed supplies are hidden
+ *     and auto-filled, so they're skipped) must have BOTH Auth and SoS
+ *     selected.
+ */
+export function validateBenefitsForSubmit(patient: Patient): string[] {
+  const missing: string[] = [];
+  const ins = patient.insurance ?? EMPTY_INSURANCE;
+
+  // Universal checks
+  for (const id of ["in-network", "active", "dme-benefits"] as const) {
+    if (!ins.universal[id]) {
+      missing.push(UNIVERSAL_LABELS[id] ?? id);
+    }
+  }
+
+  // Per-product Auth + SoS (visible products only)
+  const resolved = resolveHcpcs(
+    patient.primaryInsurance || null,
+    patient.serving || null,
+    patient.secondaryInsurance ?? null,
+  );
+  const visible = resolved.filter((r) => !isAutoFilledMedicaidSupply(r));
+  for (const r of visible) {
+    const codeId = PRODUCT_TO_CODE_ID_VALIDATOR[r.product];
+    const state = ins.codes[codeId];
+    if (!state?.auth) missing.push(`${PRODUCT_LABELS[r.product]} · Auth Requirements`);
+    if (!state?.sos) missing.push(`${PRODUCT_LABELS[r.product]} · Same or Similar`);
+  }
+
+  return missing;
 }
 
