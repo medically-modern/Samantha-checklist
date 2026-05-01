@@ -38,6 +38,7 @@ export const COL = {
 
   callReferenceNotes: "long_text_mm2ffsme",
   carecentrixIntakeId: "text_mm2wnhx",
+  callFaxNumber: "text_mm2yd7st",
 
   // Per-product auth result columns
   authResult: {

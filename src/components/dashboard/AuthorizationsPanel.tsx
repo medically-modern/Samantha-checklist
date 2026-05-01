@@ -161,27 +161,46 @@ function ProductAuthBlock({ meta, resolved, state, onChange, primaryInsurance }:
       {/* Submit Auth fields */}
       <div className="p-4 bg-muted/20">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="sm:col-span-2">
-            <FieldLabel>Auth Submission Method</FieldLabel>
-            <Select
-              value={state.authSubmissionMethod || "__none__"}
-              onValueChange={(v) =>
-                onChange({
-                  authSubmissionMethod: (v === "__none__" ? "" : v) as AuthSubmissionMethod,
-                })
-              }
-            >
-              <SelectTrigger className="mt-1 h-9 bg-background font-medium">
-                <SelectValue placeholder="Select submission method…" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">— Not selected —</SelectItem>
-                {AUTH_SUBMISSION_METHODS.map((m) => (
-                  <SelectItem key={m} value={m}>{m}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {(() => {
+            const isCallOrFax =
+              state.authSubmissionMethod === "Call" || state.authSubmissionMethod === "Fax";
+            return (
+              <div className={isCallOrFax ? "" : "sm:col-span-2"}>
+                <FieldLabel>Auth Submission Method</FieldLabel>
+                <Select
+                  value={state.authSubmissionMethod || "__none__"}
+                  onValueChange={(v) =>
+                    onChange({
+                      authSubmissionMethod: (v === "__none__" ? "" : v) as AuthSubmissionMethod,
+                    })
+                  }
+                >
+                  <SelectTrigger className="mt-1 h-9 bg-background font-medium">
+                    <SelectValue placeholder="Select submission method…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">— Not selected —</SelectItem>
+                    {AUTH_SUBMISSION_METHODS.map((m) => (
+                      <SelectItem key={m} value={m}>{m}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            );
+          })()}
+          {(state.authSubmissionMethod === "Call" || state.authSubmissionMethod === "Fax") && (
+            <div>
+              <FieldLabel>
+                {state.authSubmissionMethod === "Call" ? "Call Number" : "Fax Number"}
+              </FieldLabel>
+              <Input
+                value={state.callFaxNumber ?? ""}
+                onChange={(e) => onChange({ callFaxNumber: e.target.value })}
+                placeholder="e.g. (555) 123-4567"
+                className="mt-1 h-9 bg-background font-mono text-sm"
+              />
+            </div>
+          )}
           <div>
             <FieldLabel>Auth Submission Date</FieldLabel>
             <Input

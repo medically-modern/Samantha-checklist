@@ -352,6 +352,27 @@ export async function sendPatientToMonday(p: Patient, context: "benefits" | "sub
     }
   }
 
+  // ----- Call/Fax Number (single shared column) -----
+  // The Monday board has one Call/Fax Number column for the whole patient.
+  // If any served product was submitted via Call or Fax, write the first
+  // non-empty callFaxNumber we find to that column.
+  {
+    const cf = entries.find(
+      (e) =>
+        (e.state?.authSubmissionMethod === "Call" ||
+          e.state?.authSubmissionMethod === "Fax") &&
+        !!e.state?.callFaxNumber,
+    );
+    if (cf?.state?.callFaxNumber) {
+      const num = cf.state.callFaxNumber;
+      tasks.push({
+        label: "Call/Fax Number",
+        columnId: COL.callFaxNumber,
+        fn: () => writeText(p.id, COL.callFaxNumber, num),
+      });
+    }
+  }
+
   // ----- Auth Outstanding: per-product auth result (Auth Valid / Denied) -----
   if (context === "authOutstanding") {
     console.log('[mondayWrite] authOutstanding entries:', entries.map(e => ({
