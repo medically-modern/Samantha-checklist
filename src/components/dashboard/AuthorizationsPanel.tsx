@@ -91,26 +91,44 @@ export function AuthorizationsPanel({ patient, onCodeChange }: Props) {
         </div>
       )}
 
-      {dropdownsReady && authRequired.length > 0 && (
-        <div className="space-y-4">
-          {authRequired.map((r) => {
-            const codeId = PRODUCT_TO_CODE_ID[r.product];
-            const meta = PRODUCT_CODES.find((c) => c.id === codeId);
-            if (!meta) return null;
-            const state = ins.codes[codeId] ?? { status: "pending" as const };
-            return (
-              <ProductAuthBlock
-                key={codeId}
-                meta={meta}
-                resolved={r}
-                state={state}
-                onChange={(patch) => onCodeChange(codeId, patch)}
-                primaryInsurance={primaryInsurance}
-              />
-            );
-          })}
-        </div>
-      )}
+      {dropdownsReady && authRequired.length > 0 && (() => {
+        // Carecentrix Intake ID is shared across all auth-required products —
+        // there's only ever one ID per patient. Derive the shared value once
+        // from the first non-empty intakeId, and provide a setter that fans
+        // the change out to every auth-required product so they stay in sync.
+        const sharedIntakeId =
+          authRequired
+            .map((r) => ins.codes[PRODUCT_TO_CODE_ID[r.product]]?.intakeId)
+            .find((v) => !!v) ?? "";
+        const setIntakeIdForAll = (value: string) => {
+          for (const r of authRequired) {
+            onCodeChange(PRODUCT_TO_CODE_ID[r.product], { intakeId: value });
+          }
+        };
+
+        return (
+          <div className="space-y-4">
+            {authRequired.map((r) => {
+              const codeId = PRODUCT_TO_CODE_ID[r.product];
+              const meta = PRODUCT_CODES.find((c) => c.id === codeId);
+              if (!meta) return null;
+              const state = ins.codes[codeId] ?? { status: "pending" as const };
+              return (
+                <ProductAuthBlock
+                  key={codeId}
+                  meta={meta}
+                  resolved={r}
+                  state={state}
+                  onChange={(patch) => onCodeChange(codeId, patch)}
+                  primaryInsurance={primaryInsurance}
+                  sharedIntakeId={sharedIntakeId}
+                  onSharedIntakeIdChange={setIntakeIdForAll}
+                />
+              );
+            })}
+          </div>
+        );
+      })()}
     </section>
   );
 }
@@ -121,9 +139,20 @@ interface BlockProps {
   state: ProductCodeState;
   onChange: (patch: Partial<ProductCodeState>) => void;
   primaryInsurance: string;
+  /** Shared Carecentrix Intake ID derived once and kept in sync across products. */
+  sharedIntakeId: string;
+  onSharedIntakeIdChange: (value: string) => void;
 }
 
-function ProductAuthBlock({ meta, resolved, state, onChange, primaryInsurance }: BlockProps) {
+function ProductAuthBlock({
+  meta,
+  resolved,
+  state,
+  onChange,
+  primaryInsurance,
+  sharedIntakeId,
+  onSharedIntakeIdChange,
+}: BlockProps) {
   const isRecurring = meta.cadence === "RECURRING";
 
   return (
@@ -223,11 +252,14 @@ function ProductAuthBlock({ meta, resolved, state, onChange, primaryInsurance }:
             <div className="sm:col-span-2">
               <FieldLabel>Intake ID · Carecentrix</FieldLabel>
               <Input
-                value={state.intakeId ?? ""}
-                onChange={(e) => onChange({ intakeId: e.target.value })}
+                value={sharedIntakeId}
+                onChange={(e) => onSharedIntakeIdChange(e.target.value)}
                 placeholder="e.g. INTAKE-789"
                 className="mt-1 h-9 bg-background font-mono text-sm"
               />
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Shared across all products — only one Intake ID per patient.
+              </p>
             </div>
           )}
         </div>
