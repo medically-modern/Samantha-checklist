@@ -193,6 +193,7 @@ const Index = () => {
                     <AuthorizationsPanel
                       patient={selected}
                       onCodeChange={updateCode}
+                      onNotesChange={(v) => update(selected.id, { notes: v })}
                     />
 
                     <div className="flex items-center gap-3">
