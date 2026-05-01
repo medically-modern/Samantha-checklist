@@ -255,7 +255,7 @@ function ProductAuthBlock({ meta, resolved, state, onChange, primaryInsurance }:
               <Input
                 value={state.authId ?? ""}
                 onChange={(e) => onChange({ authId: e.target.value })}
-                placeholder="e.g. AUTH-123456"
+                placeholder="e.g. 123456"
                 className="mt-1 h-9 bg-background font-mono text-sm"
               />
             </div>
