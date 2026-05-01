@@ -16,7 +16,7 @@ import { SendToMondayButton } from "@/components/dashboard/SendToMondayButton";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { AlertTriangle, RotateCcw, Stethoscope } from "lucide-react";
+import { RotateCcw, Stethoscope } from "lucide-react";
 import { toast } from "sonner";
 import { sendPatientToMonday } from "@/lib/mondayWrite";
 import { validateBenefitsForSubmit } from "@/lib/workflow";
@@ -71,11 +71,6 @@ const Index = () => {
     });
     toast.success("Cleared local edits — refetching from Monday");
     refetch();
-  };
-
-  const toggleEscalate = () => {
-    if (!selected) return;
-    update(selected.id, { escalated: !selected.escalated });
   };
 
   // Benefits-tab missing-field list. Used to disable the Send to Monday
@@ -183,19 +178,7 @@ const Index = () => {
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                      <Button
-                      onClick={toggleEscalate}
-                      variant="outline"
-                      className={selected.escalated
-                        ? "gap-2 bg-red-100 hover:bg-red-200 !text-red-600 border-red-400 shadow-md hover:animate-shake"
-                        : "gap-2 border-red-300 !text-red-600 hover:bg-red-50 hover:animate-shake"}
-                    >
-                      <AlertTriangle className="h-4 w-4" />
-                      {selected.escalated ? "Escalation Required" : "Escalate"}
-                    </Button>
-                    </div>
-                    <SendToMondayButton
+<SendToMondayButton
                       onSend={handleSend}
                       disabled={!selected || benefitsMissing.length > 0}
                     />
@@ -220,19 +203,7 @@ const Index = () => {
                       onNotesChange={(v) => update(selected.id, { notes: v })}
                     />
 
-                    <div className="flex items-center gap-3">
-                      <Button
-                      onClick={toggleEscalate}
-                      variant="outline"
-                      className={selected.escalated
-                        ? "gap-2 bg-red-100 hover:bg-red-200 !text-red-600 border-red-400 shadow-md hover:animate-shake"
-                        : "gap-2 border-red-300 !text-red-600 hover:bg-red-50 hover:animate-shake"}
-                    >
-                      <AlertTriangle className="h-4 w-4" />
-                      {selected.escalated ? "Escalation Required" : "Escalate"}
-                    </Button>
-                    </div>
-                    <SendToMondayButton onSend={handleSend} disabled={!selected} />
+<SendToMondayButton onSend={handleSend} disabled={!selected} />
                   </TabsContent>
                   <TabsContent value="authOutstanding" className="space-y-5 mt-0">
                     <PatientProfileCard patient={selected} />
@@ -243,19 +214,7 @@ const Index = () => {
                       onNotesChange={(v) => update(selected.id, { notes: v })}
                     />
 
-                    <div className="flex items-center gap-3">
-                      <Button
-                      onClick={toggleEscalate}
-                      variant="outline"
-                      className={selected.escalated
-                        ? "gap-2 bg-red-100 hover:bg-red-200 !text-red-600 border-red-400 shadow-md hover:animate-shake"
-                        : "gap-2 border-red-300 !text-red-600 hover:bg-red-50 hover:animate-shake"}
-                    >
-                      <AlertTriangle className="h-4 w-4" />
-                      {selected.escalated ? "Escalation Required" : "Escalate"}
-                    </Button>
-                    </div>
-                    <SendToMondayButton onSend={handleSend} disabled={!selected} />
+<SendToMondayButton onSend={handleSend} disabled={!selected} />
                   </TabsContent>
                 </>
               )}

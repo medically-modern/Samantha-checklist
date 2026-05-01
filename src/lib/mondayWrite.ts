@@ -229,15 +229,6 @@ export async function sendPatientToMonday(p: Patient, context: "benefits" | "sub
     console.log('[mondayWrite] deriveInsuranceOutcome =>', _outcome);
   }
 
-  // ----- Manual Escalation (any tab) -----
-  if (p.escalated) {
-    tasks.push({
-      label: "Escalation",
-      columnId: COL.escalation,
-      fn: () => writeStatusIndex(p.id, COL.escalation, ESCALATION_INDEX.required),
-    });
-  }
-
   // ----- Escalation + Stage Advancer -----
   // Stage Advancer never goes to "Stuck" — the Escalation column is the
   // only place we surface that something needs attention. Blocker
