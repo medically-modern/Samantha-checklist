@@ -188,7 +188,7 @@ const Index = () => {
                   </TabsContent>
 
                   <TabsContent value="authorizations" className="space-y-5 mt-0">
-                    <PatientProfileCard patient={selected} showInsuranceContext />
+                    <PatientProfileCard patient={selected} />
 
                     <AuthorizationsPanel
                       patient={selected}
@@ -210,7 +210,7 @@ const Index = () => {
                     <SendToMondayButton onSend={handleSend} disabled={!selected} />
                   </TabsContent>
                   <TabsContent value="authOutstanding" className="space-y-5 mt-0">
-                    <PatientProfileCard patient={selected} showInsuranceContext />
+                    <PatientProfileCard patient={selected} />
 
                     <AuthOutstandingPanel
                       patient={selected}

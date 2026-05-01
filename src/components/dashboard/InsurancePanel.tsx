@@ -106,36 +106,10 @@ export function InsurancePanel({
         </div>
       </div>
 
-      {/* STEP 1 — Patient context (read-only from Monday) */}
+      {/* STEP 1 — Phone call universal checks
+         (Serving + Primary Insurance now live in the Patient Profile card above.) */}
       <StepSection
         number={1}
-        title="Patient context"
-        subtitle="Serving and insurance pulled from Monday — not editable here."
-        complete={dropdownsReady}
-      >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Serving
-            </label>
-            <div className="mt-1 h-9 flex items-center px-3 rounded-md border bg-muted text-sm">
-              {serving || <span className="text-muted-foreground">—</span>}
-            </div>
-          </div>
-          <div>
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Primary Insurance
-            </label>
-            <div className="mt-1 h-9 flex items-center px-3 rounded-md border bg-muted text-sm">
-              {primaryInsurance || <span className="text-muted-foreground">—</span>}
-            </div>
-          </div>
-        </div>
-      </StepSection>
-
-      {/* STEP 2 — Phone call universal checks */}
-      <StepSection
-        number={2}
         title="Call the payer · confirm universal checks"
         subtitle="Fill these from a phone call to the insurance payer. All three required."
         complete={universalDone}
@@ -197,9 +171,9 @@ export function InsurancePanel({
         </div>
       </StepSection>
 
-      {/* STEP 3 — Product cards */}
+      {/* STEP 2 — Product cards */}
       <StepSection
-        number={3}
+        number={2}
         title="Product-Specific SoS and Auth Requirements"
         subtitle="For each product, select Auth Requirements and Same or Similar status."
         complete={
