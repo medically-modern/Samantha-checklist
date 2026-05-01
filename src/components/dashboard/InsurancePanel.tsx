@@ -42,6 +42,24 @@ const PRODUCT_TO_CODE_ID: Record<ProductId, ProductCodeId> = {
   cartridge: "cartridges",
 };
 
+/**
+ * Hide infusion sets / cartridges that bill to Medicaid from Samantha's UI.
+ * These products always behave the same way: Auth = Required, SoS = Skip
+ * (no SoS check is run for Medicaid supplies). They still get written to
+ * Monday with Auth Result = "Required", but the user doesn't need to pick
+ * anything for them in the UI.
+ *
+ * Example: pump via Fidelis Commercial + supplies via Medicaid →
+ *   visible: insulin_pump
+ *   hidden : infusion_set, cartridge (auto-filled to Required + Clear)
+ */
+function isAutoFilledMedicaidSupply(r: ResolvedProduct): boolean {
+  return (
+    (r.product === "infusion_set" || r.product === "cartridge") &&
+    r.billsTo === "medicaid"
+  );
+}
+
 export function InsurancePanel({
   patient,
   onUniversalChange,
@@ -56,6 +74,9 @@ export function InsurancePanel({
   const serving = patient.serving || "";
   const primaryInsurance = patient.primaryInsurance || "";
   const resolved: ResolvedProduct[] = resolveHcpcs(primaryInsurance || null, serving || null);
+  // Products to render in Samantha's UI — Medicaid-billed supplies are
+  // hidden and auto-filled downstream (Auth=Required, SoS=Skip).
+  const visibleResolved = resolved.filter((r) => !isAutoFilledMedicaidSupply(r));
   const dropdownsReady = !!serving && !!primaryInsurance;
 
   return (
@@ -167,10 +188,10 @@ export function InsurancePanel({
         subtitle="For each product, select Auth Requirements and Same or Similar status."
         complete={
           dropdownsReady &&
-          resolved.length > 0 &&
-          resolved.every((r) => {
+          visibleResolved.length > 0 &&
+          visibleResolved.every((r) => {
             const s = ins.codes[PRODUCT_TO_CODE_ID[r.product]];
-            // Both Auth and SoS are required for every product.
+            // Both Auth and SoS are required for every visible product.
             return !!s?.auth && !!s?.sos;
           })
         }
@@ -185,7 +206,7 @@ export function InsurancePanel({
 
         {dropdownsReady && (
           <div className="space-y-3">
-            {resolved.map((r) => {
+            {visibleResolved.map((r) => {
               const codeId = PRODUCT_TO_CODE_ID[r.product];
               const meta = PRODUCT_CODES.find((c) => c.id === codeId);
               if (!meta) return null;
@@ -450,10 +471,22 @@ function deriveMondayColumns(patient: Patient, resolved: ResolvedProduct[]) {
   // 2) DME Benefits
   const dmeBenefits = u["dme-benefits"] === "confirmed" ? "Yes" : "Partial / No";
 
-  // Per-product states (only those active for this serving)
+  // Per-product states (only those active for this serving).
+  // Medicaid-billed infusion sets / cartridges are auto-filled to
+  // Auth=Required, SoS=Clear (the user doesn't see them in the UI; the
+  // SoS check is conceptually "skipped" so we treat it as not-not-clear
+  // for the aggregate roll-up).
   const productStates = resolved.map((r) => {
     const codeId = PRODUCT_TO_CODE_ID[r.product];
     const s = ins.codes[codeId];
+    if (isAutoFilledMedicaidSupply(r)) {
+      return {
+        product: r.product,
+        label: PRODUCT_LABELS[r.product],
+        auth: "required" as AuthChoice,
+        sos: "clear" as SosChoice,
+      };
+    }
     return {
       product: r.product,
       label: PRODUCT_LABELS[r.product],
@@ -566,14 +599,16 @@ function MondayOutput({
     { key: "escalation", label: "Escalation", value: cols.escalation },
   ];
 
-  // Auth result columns: show all 5 only if any product requires auth
-  const anyAuthRequired = resolved.some(
-    (r) => ins.codes[PRODUCT_TO_CODE_ID[r.product]]?.auth === "required",
-  );
+  // Auth result columns: show all 5 only if any product requires auth.
+  // Medicaid-billed supplies are auto-Required (they're hidden in the UI
+  // but still need to land on Monday with Auth Result = "Required").
+  const isProductAuthRequired = (r: ResolvedProduct) =>
+    isAutoFilledMedicaidSupply(r)
+      ? true
+      : ins.codes[PRODUCT_TO_CODE_ID[r.product]]?.auth === "required";
+  const anyAuthRequired = resolved.some(isProductAuthRequired);
   const requiredSet = new Set(
-    resolved
-      .filter((r) => ins.codes[PRODUCT_TO_CODE_ID[r.product]]?.auth === "required")
-      .map((r) => r.product),
+    resolved.filter(isProductAuthRequired).map((r) => r.product),
   );
   const servedSet = new Set(resolved.map((r) => r.product));
   const authResultRows = anyAuthRequired
