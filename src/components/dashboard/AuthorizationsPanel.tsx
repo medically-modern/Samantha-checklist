@@ -281,7 +281,12 @@ function AuthRequirementsMatrix({
                   {isServed && !isNotServing ? "Serving" : "Not Serving"}
                 </p>
               </div>
-              <div className="mt-auto flex items-center gap-1.5 flex-wrap">
+              <div className="mt-auto flex flex-col gap-1.5">
+                {isMedicaidRouted && (
+                  <span className="self-start inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/40 whitespace-nowrap">
+                    E-paces DVS
+                  </span>
+                )}
                 <div
                   className={cn(
                     "h-9 flex items-center px-3 rounded-md border text-sm font-medium bg-muted",
@@ -292,11 +297,6 @@ function AuthRequirementsMatrix({
                 >
                   {label || "—"}
                 </div>
-                {isMedicaidRouted && (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/40 whitespace-nowrap">
-                    E-paces DVS
-                  </span>
-                )}
               </div>
             </div>
           );
