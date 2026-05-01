@@ -6,7 +6,25 @@
 // nothing is silently lost.
 
 import { writeStatusIndex, writeLongText, writeDropdownIds, writeText, writeDate, writeNumber, COL } from "./mondayApi";
-import { resolveHcpcs } from "./hcpcRules";
+import { resolveHcpcs, type ResolvedProduct } from "./hcpcRules";
+
+/**
+ * Medicaid-billed Infusion Sets / Cartridges are hidden from Samantha's
+ * UI (see InsurancePanel.tsx). The user never picks anything for them,
+ * so `ins.codes[cid]` stays empty. When writing to Monday, we auto-fill
+ * those products with Auth=Required, SoS=Clear so:
+ *   - Their per-product Auth Result column lands as "Required"
+ *   - The aggregate Auth + SoS columns compute correctly (allFilled=true)
+ *   - Stage Advancer + escalation logic see them as resolved products
+ *
+ * Keep in lockstep with isAutoFilledMedicaidSupply in InsurancePanel.tsx.
+ */
+function isAutoFilledMedicaidSupply(r: ResolvedProduct): boolean {
+  return (
+    (r.product === "infusion_set" || r.product === "cartridge") &&
+    r.billsTo === "medicaid"
+  );
+}
 import {
   AUTH_RESULT_INDEX,
   AUTH_METHOD_OPTION_ID,
@@ -105,14 +123,31 @@ export async function sendPatientToMonday(p: Patient, context: "benefits" | "sub
   }
 
   // ----- Per-product auth-result columns -----
+  // Build entries from resolved products. For Medicaid-billed supplies
+  // (hidden in the UI) the user never sets state, so we auto-fill
+  // Auth=Required, SoS=Clear here — matching the UI preview's behavior.
   const entries = resolved
     .map((r) => {
       const cid = Object.entries(PRODUCT_CODE_TO_PRODUCT_ID).find(([, v]) => v === r.product)?.[0] as
         | ProductCodeId
         | undefined;
-      return cid ? { cid, state: ins.codes[cid] } : null;
+      if (!cid) return null;
+      const userState = ins.codes[cid];
+      const state: ProductCodeState | undefined = isAutoFilledMedicaidSupply(r)
+        ? { ...(userState ?? { status: "pending" }), auth: "required", sos: "clear" }
+        : userState;
+      return { cid, state };
     })
     .filter((e): e is { cid: ProductCodeId; state: ProductCodeState | undefined } => !!e);
+
+  // Effective insurance state with auto-filled codes — used by
+  // deriveInsuranceOutcome below so blocker/auth-required/all-clear logic
+  // sees the same picture as the UI preview.
+  const effectiveCodes: typeof ins.codes = { ...ins.codes };
+  for (const e of entries) {
+    if (e.state) effectiveCodes[e.cid] = e.state;
+  }
+  const effectiveIns = { ...ins, codes: effectiveCodes };
 
   // Write auth result for served products (skip for authOutstanding — handled separately below)
   const servedProductKeys = new Set(entries.map((e) => PRODUCT_CODE_TO_PRODUCT_ID[e.cid]));
@@ -208,10 +243,10 @@ export async function sendPatientToMonday(p: Patient, context: "benefits" | "sub
 
   // ----- Debug: trace deriveInsuranceOutcome -----
   {
-    const _outcome = deriveInsuranceOutcome(ins, entries.map(e => e.cid));
-    const _codeStates = Object.values(ins.codes).filter(Boolean);
+    const _outcome = deriveInsuranceOutcome(effectiveIns, entries.map(e => e.cid));
+    const _codeStates = Object.values(effectiveIns.codes).filter(Boolean);
     console.log('[mondayWrite] context:', context);
-    console.log('[mondayWrite] universal:', JSON.stringify(ins.universal));
+    console.log('[mondayWrite] universal:', JSON.stringify(effectiveIns.universal));
     console.log('[mondayWrite] codeStates:', JSON.stringify(_codeStates.map((c: any) => ({ auth: c.auth, sos: c.sos }))));
     console.log('[mondayWrite] entries:', JSON.stringify(entries.map(e => ({ cid: e.cid, auth: e.state?.auth, sos: e.state?.sos }))));
     console.log('[mondayWrite] deriveInsuranceOutcome =>', _outcome);
@@ -244,7 +279,7 @@ export async function sendPatientToMonday(p: Patient, context: "benefits" | "sub
       fn: () => writeStatusIndex(p.id, COL.stageAdvancer, STAGE_INDEX.complete),
     });
   } else {
-    const outcome = deriveInsuranceOutcome(ins, entries.map(e => e.cid));
+    const outcome = deriveInsuranceOutcome(effectiveIns, entries.map(e => e.cid));
 
     // Blocker → only flag escalation. Do NOT move Stage Advancer to Stuck.
     if (outcome === "blocker") {
