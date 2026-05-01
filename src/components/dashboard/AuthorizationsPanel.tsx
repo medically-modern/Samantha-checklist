@@ -9,6 +9,7 @@ import {
 } from "@/lib/workflow";
 import {
   resolveHcpcs,
+  isAutoFilledMedicaidSupply,
   PRODUCT_LABELS,
   type ProductId,
   type ResolvedProduct,
@@ -40,8 +41,12 @@ export function AuthorizationsPanel({ patient, onCodeChange }: Props) {
 
   const resolved: ResolvedProduct[] = resolveHcpcs(primaryInsurance || null, serving || null);
 
-  // Only products that are being served AND require auth
-  const authRequired = resolved.filter(
+  // Hide infusion sets / cartridges that bill to Medicaid — Medicaid handles
+  // the auth flow on its own, so the user has nothing to submit here.
+  const visibleResolved = resolved.filter((r) => !isAutoFilledMedicaidSupply(r));
+
+  // Only visible products that require auth
+  const authRequired = visibleResolved.filter(
     (r) => ins.codes[PRODUCT_TO_CODE_ID[r.product]]?.auth === "required",
   );
 
@@ -67,7 +72,8 @@ export function AuthorizationsPanel({ patient, onCodeChange }: Props) {
 
       {dropdownsReady && (
         <AuthRequirementsMatrix
-          resolved={resolved}
+          resolved={visibleResolved}
+          hiddenProducts={new Set(resolved.filter(isAutoFilledMedicaidSupply).map((r) => r.product))}
           ins={ins}
         />
       )}
@@ -217,13 +223,17 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
 
 function AuthRequirementsMatrix({
   resolved,
+  hiddenProducts,
   ins,
 }: {
   resolved: ResolvedProduct[];
+  hiddenProducts: Set<ProductId>;
   ins: { codes: Partial<Record<ProductCodeId, ProductCodeState>> };
 }) {
-  // Show all 5 products, in canonical order
-  const ALL: ProductId[] = ["monitor", "sensors", "insulin_pump", "infusion_set", "cartridge"];
+  // Show 5 products in canonical order — minus any that are routed to
+  // Medicaid (those are handled outside this UI).
+  const ALL: ProductId[] = (["monitor", "sensors", "insulin_pump", "infusion_set", "cartridge"] as ProductId[])
+    .filter((p) => !hiddenProducts.has(p));
   const servedSet = new Set(resolved.map((r) => r.product));
 
   return (

@@ -13,6 +13,7 @@ import {
 } from "@/lib/workflow";
 import {
   resolveHcpcs,
+  isAutoFilledMedicaidSupply,
   PRODUCT_LABELS,
   type PrimaryInsurance,
   type Serving,
@@ -42,24 +43,6 @@ const PRODUCT_TO_CODE_ID: Record<ProductId, ProductCodeId> = {
   infusion_set: "infusion-sets",
   cartridge: "cartridges",
 };
-
-/**
- * Hide infusion sets / cartridges that bill to Medicaid from Samantha's UI.
- * These products always behave the same way: Auth = Required, SoS = Skip
- * (no SoS check is run for Medicaid supplies). They still get written to
- * Monday with Auth Result = "Required", but the user doesn't need to pick
- * anything for them in the UI.
- *
- * Example: pump via Fidelis Commercial + supplies via Medicaid →
- *   visible: insulin_pump
- *   hidden : infusion_set, cartridge (auto-filled to Required + Clear)
- */
-function isAutoFilledMedicaidSupply(r: ResolvedProduct): boolean {
-  return (
-    (r.product === "infusion_set" || r.product === "cartridge") &&
-    r.billsTo === "medicaid"
-  );
-}
 
 export function InsurancePanel({
   patient,

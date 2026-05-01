@@ -6,25 +6,7 @@
 // nothing is silently lost.
 
 import { writeStatusIndex, writeLongText, writeDropdownIds, writeText, writeDate, writeNumber, COL } from "./mondayApi";
-import { resolveHcpcs, type ResolvedProduct } from "./hcpcRules";
-
-/**
- * Medicaid-billed Infusion Sets / Cartridges are hidden from Samantha's
- * UI (see InsurancePanel.tsx). The user never picks anything for them,
- * so `ins.codes[cid]` stays empty. When writing to Monday, we auto-fill
- * those products with Auth=Required, SoS=Clear so:
- *   - Their per-product Auth Result column lands as "Required"
- *   - The aggregate Auth + SoS columns compute correctly (allFilled=true)
- *   - Stage Advancer + escalation logic see them as resolved products
- *
- * Keep in lockstep with isAutoFilledMedicaidSupply in InsurancePanel.tsx.
- */
-function isAutoFilledMedicaidSupply(r: ResolvedProduct): boolean {
-  return (
-    (r.product === "infusion_set" || r.product === "cartridge") &&
-    r.billsTo === "medicaid"
-  );
-}
+import { resolveHcpcs, isAutoFilledMedicaidSupply } from "./hcpcRules";
 import {
   AUTH_RESULT_INDEX,
   AUTH_METHOD_OPTION_ID,

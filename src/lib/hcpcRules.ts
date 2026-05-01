@@ -246,3 +246,20 @@ export const PRODUCT_LABELS: Record<ProductId, string> = {
   infusion_set: "Infusion Sets",
   cartridge:    "Cartridges",
 };
+
+/**
+ * True when a resolved product is an Infusion Set / Cartridge that bills
+ * to Medicaid. These products are hidden from Samantha's UI on every
+ * tab — Benefits auto-fills them (Auth=Required, SoS=Clear) and
+ * Submit Auth / Auth Outstanding skip them entirely (Medicaid handles
+ * the auth flow on its own; the user has nothing to submit).
+ *
+ * Driven by SUPPLIES_ROUTE_TO_MEDICAID in this file:
+ * Fidelis Medicaid, Anthem BCBS Medicaid (JLJ), Medicaid.
+ */
+export function isAutoFilledMedicaidSupply(r: ResolvedProduct): boolean {
+  return (
+    (r.product === "infusion_set" || r.product === "cartridge") &&
+    r.billsTo === "medicaid"
+  );
+}
