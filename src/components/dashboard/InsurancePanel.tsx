@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertTriangle, CheckCircle2, Clock, ShieldCheck, ShieldAlert, Repeat, Package, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useEffect } from "react";
 
 interface Props {
   patient: Patient;
@@ -78,6 +79,21 @@ export function InsurancePanel({
   // hidden and auto-filled downstream (Auth=Required, SoS=Skip).
   const visibleResolved = resolved.filter((r) => !isAutoFilledMedicaidSupply(r));
   const dropdownsReady = !!serving && !!primaryInsurance;
+
+  // Default the Insulin Pump card to Auth=Required, SoS=Clear when the
+  // patient is on Medicaid + Insulin Pump serving — for that combo the
+  // answer is always the same, so we pre-fill so Samantha doesn't have
+  // to pick. The pump card stays visible and can be overridden.
+  const pumpState = ins.codes["pump"];
+  useEffect(() => {
+    if (primaryInsurance !== "Medicaid" || serving !== "Insulin Pump") return;
+    const patch: Partial<ProductCodeState> = {};
+    if (!pumpState?.auth) patch.auth = "required";
+    if (!pumpState?.sos) patch.sos = "clear";
+    if (Object.keys(patch).length > 0) {
+      onCodeChange("pump", patch);
+    }
+  }, [primaryInsurance, serving, pumpState?.auth, pumpState?.sos, onCodeChange]);
 
   return (
     <section className="rounded-xl border bg-card p-5 shadow-card space-y-6">
