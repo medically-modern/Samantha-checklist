@@ -227,6 +227,10 @@ export async function sendPatientToMonday(p: Patient, context: "benefits" | "sub
   }
 
   // ----- Escalation + Stage Advancer -----
+  // Stage Advancer never goes to "Stuck" — the Escalation column is the
+  // only place we surface that something needs attention. Blocker
+  // conditions (universal not confirmed, SoS not clear) leave the
+  // patient in the Benefits / SoS stage with Escalation flagged.
   if (context === "submitAuth") {
     tasks.push({
       label: "Stage Advancer",
@@ -241,36 +245,31 @@ export async function sendPatientToMonday(p: Patient, context: "benefits" | "sub
     });
   } else {
     const outcome = deriveInsuranceOutcome(ins, entries.map(e => e.cid));
+
+    // Blocker → only flag escalation. Do NOT move Stage Advancer to Stuck.
     if (outcome === "blocker") {
       tasks.push({
         label: "Escalation",
         columnId: COL.escalation,
         fn: () => writeStatusIndex(p.id, COL.escalation, ESCALATION_INDEX.required),
       });
-      tasks.push({
-        label: "Stage Advancer",
-        columnId: COL.stageAdvancer,
-        fn: () => writeStatusIndex(p.id, COL.stageAdvancer, STAGE_INDEX.stuck),
-      });
-    } else if (outcome === "all-clear") {
-      tasks.push({
-        label: "Stage Advancer",
-        columnId: COL.stageAdvancer,
-        fn: () => writeStatusIndex(p.id, COL.stageAdvancer, STAGE_INDEX.complete),
-      });
-    } else if (outcome === "auth-required") {
-      tasks.push({
-        label: "Stage Advancer",
-        columnId: COL.stageAdvancer,
-        fn: () => writeStatusIndex(p.id, COL.stageAdvancer, STAGE_INDEX.authorization),
-      });
-    } else {
-      tasks.push({
-        label: "Stage Advancer",
-        columnId: COL.stageAdvancer,
-        fn: () => writeStatusIndex(p.id, COL.stageAdvancer, STAGE_INDEX.benefitsSos),
-      });
     }
+
+    // Stage Advancer — always one of: Benefits / SoS, Authorization, Complete.
+    let stageIndex: number;
+    if (outcome === "all-clear") {
+      stageIndex = STAGE_INDEX.complete;
+    } else if (outcome === "auth-required") {
+      stageIndex = STAGE_INDEX.authorization;
+    } else {
+      // "blocker" or "incomplete" → still working through Benefits / SoS
+      stageIndex = STAGE_INDEX.benefitsSos;
+    }
+    tasks.push({
+      label: "Stage Advancer",
+      columnId: COL.stageAdvancer,
+      fn: () => writeStatusIndex(p.id, COL.stageAdvancer, stageIndex),
+    });
   }
 
   // ----- Per-product auth submission fields (Authorizations tab) -----
