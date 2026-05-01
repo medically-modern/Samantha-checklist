@@ -78,24 +78,20 @@ const Index = () => {
     update(selected.id, { escalated: !selected.escalated });
   };
 
+  // Benefits-tab missing-field list. Used to disable the Send to Monday
+  // button (and show inline guidance below it) on the Benefits tab.
+  const benefitsMissing = selected ? validateBenefitsForSubmit(selected) : [];
+
   const handleSend = async () => {
     if (!selected) return;
     const context = mainTab === "authorizations" ? "submitAuth" as const
       : mainTab === "authOutstanding" ? "authOutstanding" as const
       : "benefits" as const;
 
-    // Benefits tab: block submit if any required field on Step 1 (universal
-    // checks) or Step 2 (per-product Auth + SoS) is empty. Surfaces a toast
-    // listing the missing fields so Samantha knows exactly what to fix.
-    if (context === "benefits") {
-      const missing = validateBenefitsForSubmit(selected);
-      if (missing.length > 0) {
-        toast.error("Can't send — missing fields", {
-          description: missing.join(" · "),
-        });
-        return;
-      }
-    }
+    // Defense in depth — the Benefits Send button is disabled when fields
+    // are missing, so this branch should rarely fire. Keep the guard so
+    // we never silently send a partial payload.
+    if (context === "benefits" && benefitsMissing.length > 0) return;
 
     try {
       await sendPatientToMonday(selected, context);
@@ -199,7 +195,20 @@ const Index = () => {
                       {selected.escalated ? "Escalation Required" : "Escalate"}
                     </Button>
                     </div>
-                    <SendToMondayButton onSend={handleSend} disabled={!selected} />
+                    <SendToMondayButton
+                      onSend={handleSend}
+                      disabled={!selected || benefitsMissing.length > 0}
+                    />
+                    {benefitsMissing.length > 0 && (
+                      <div className="max-w-xl mx-auto rounded-md border border-warning/40 bg-warning/10 px-4 py-2 text-center">
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-warning-foreground/80">
+                          Missing before send
+                        </p>
+                        <p className="mt-0.5 text-xs text-warning-foreground">
+                          {benefitsMissing.join(" · ")}
+                        </p>
+                      </div>
+                    )}
                   </TabsContent>
 
                   <TabsContent value="authorizations" className="space-y-5 mt-0">
