@@ -130,6 +130,9 @@ export function mondayItemToPatient(item: MondayItem): Patient {
   const notes = cv(COL.callReferenceNotes)?.text ?? "";
   const memberId1 = cv(COL.memberId1)?.text ?? "";
   const memberId2 = cv(COL.memberId2)?.text ?? "";
+  // Secondary Insurance is a status column with labels: "None", "NY Medicaid",
+  // "Medicare Supplement". The text comes back as the label string.
+  const secondaryInsurance = cv(COL.secondaryInsurance)?.text ?? "";
 
   // Parse universal checks from Monday (only present for auth group reads)
   const activeNetText = cv(COL.activeNetwork)?.text;
@@ -226,6 +229,7 @@ export function mondayItemToPatient(item: MondayItem): Patient {
     owner: "Samantha",
     serving,
     primaryInsurance: primary,
+    secondaryInsurance,
     memberId1,
     memberId2,
     insurance: {
