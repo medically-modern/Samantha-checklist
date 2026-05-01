@@ -379,47 +379,75 @@ export async function sendPatientToMonday(p: Patient, context: "benefits" | "sub
   for (const { cid, state } of entries) {
     if (!state) continue;
     const productId = PRODUCT_CODE_TO_PRODUCT_ID[cid];
+    const productLabel = cid;
 
     // Auth Submission Method (dropdown)
     if (state.authSubmissionMethod) {
       const optId = AUTH_METHOD_OPTION_ID[state.authSubmissionMethod];
       if (optId !== undefined) {
-        tasks.push(writeDropdownIds(p.id, COL.authMethod[productId], [optId]));
+        const colId = COL.authMethod[productId];
+        tasks.push({
+          label: `Auth Method (${productLabel})`,
+          columnId: colId,
+          fn: () => writeDropdownIds(p.id, colId, [optId]),
+        });
       }
     }
 
     // Auth Submission Date (text column)
     if (state.authSubmissionDate) {
-      tasks.push(writeText(p.id, COL.authSubmissionDate[productId], state.authSubmissionDate));
+      const colId = COL.authSubmissionDate[productId];
+      const v = state.authSubmissionDate;
+      tasks.push({
+        label: `Auth Submission Date (${productLabel})`,
+        columnId: colId,
+        fn: () => writeText(p.id, colId, v),
+      });
     }
 
     // Auth ID (text column)
     if (state.authId) {
-      tasks.push(writeText(p.id, COL.authId[productId], state.authId));
+      const colId = COL.authId[productId];
+      const v = state.authId;
+      tasks.push({
+        label: `Auth ID (${productLabel})`,
+        columnId: colId,
+        fn: () => writeText(p.id, colId, v),
+      });
     }
 
     // Auth Start (date column)
     if (state.authStart) {
-      tasks.push(writeDate(p.id, COL.authStart[productId], state.authStart));
+      const colId = COL.authStart[productId];
+      const v = state.authStart;
+      tasks.push({
+        label: `Auth Start (${productLabel})`,
+        columnId: colId,
+        fn: () => writeDate(p.id, colId, v),
+      });
     }
 
     // Auth End (date column)
     if (state.authEnd) {
-      tasks.push(writeDate(p.id, COL.authEnd[productId], state.authEnd));
+      const colId = COL.authEnd[productId];
+      const v = state.authEnd;
+      tasks.push({
+        label: `Auth End (${productLabel})`,
+        columnId: colId,
+        fn: () => writeDate(p.id, colId, v),
+      });
     }
 
     // Auth Units (numeric column)
     if (state.authUnits) {
-      tasks.push(writeNumber(p.id, COL.authUnits[productId], state.authUnits));
+      const colId = COL.authUnits[productId];
+      const v = state.authUnits;
+      tasks.push({
+        label: `Auth Units (${productLabel})`,
+        columnId: colId,
+        fn: () => writeNumber(p.id, colId, v),
+      });
     }
-  }
-
-  // ----- Carecentrix Intake ID (single shared text column) -----
-  // Check all product codes (not just resolved entries) for a non-empty intakeId
-  const allCodeStates = Object.values(ins.codes).filter(Boolean) as ProductCodeState[];
-  const intakeId = allCodeStates.map((s) => s.intakeId).find((v) => !!v);
-  if (intakeId) {
-    tasks.push(writeText(p.id, COL.carecentrixIntakeId, intakeId));
   }
 
   // ----- Notes (long text) -----
