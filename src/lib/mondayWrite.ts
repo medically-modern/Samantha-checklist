@@ -180,8 +180,9 @@ export async function sendPatientToMonday(p: Patient, context: "benefits" | "sub
   }
 
   // ----- Not Clear Products dropdown -----
+  // Any product with SoS = not-clear lands here, regardless of auth.
   const notClearIds = entries
-    .filter((e) => e.state?.auth !== "required" && e.state?.sos === "not-clear")
+    .filter((e) => e.state?.sos === "not-clear")
     .map((e) => NOT_CLEAR_PRODUCT_ID[e.cid])
     .filter((n): n is number => typeof n === "number");
   tasks.push({
@@ -191,14 +192,16 @@ export async function sendPatientToMonday(p: Patient, context: "benefits" | "sub
   });
 
   // ----- Aggregate SoS + Auth -----
+  // SoS is now always required for every product (no auth-required skip
+  // carve-out). A patient is "all filled" only when every served product
+  // has both Auth and SoS picked.
   const states = entries.map((e) => e.state);
   const allFilled =
     states.length > 0 &&
-    states.every((s) => !!s?.auth && (s.auth === "required" || !!s?.sos));
+    states.every((s) => !!s?.auth && !!s?.sos);
   if (allFilled) {
     const anyAuth = states.some((s) => s?.auth === "required");
-    const sosRelevant = states.filter((s) => s?.auth !== "required");
-    const anyNotClear = sosRelevant.some((s) => s?.sos === "not-clear");
+    const anyNotClear = states.some((s) => s?.sos === "not-clear");
 
     tasks.push({
       label: "Auth aggregate",
@@ -207,20 +210,12 @@ export async function sendPatientToMonday(p: Patient, context: "benefits" | "sub
         writeStatusIndex(p.id, COL.auth, anyAuth ? UNIVERSAL_INDEX.auth.required : UNIVERSAL_INDEX.auth.noAuth),
     });
 
-    if (sosRelevant.length === 0) {
-      tasks.push({
-        label: "SoS aggregate",
-        columnId: COL.sos,
-        fn: () => writeStatusIndex(p.id, COL.sos, UNIVERSAL_INDEX.sos.skip),
-      });
-    } else {
-      tasks.push({
-        label: "SoS aggregate",
-        columnId: COL.sos,
-        fn: () =>
-          writeStatusIndex(p.id, COL.sos, anyNotClear ? UNIVERSAL_INDEX.sos.fail : UNIVERSAL_INDEX.sos.pass),
-      });
-    }
+    tasks.push({
+      label: "SoS aggregate",
+      columnId: COL.sos,
+      fn: () =>
+        writeStatusIndex(p.id, COL.sos, anyNotClear ? UNIVERSAL_INDEX.sos.fail : UNIVERSAL_INDEX.sos.pass),
+    });
   }
 
   // ----- Debug: trace deriveInsuranceOutcome -----
