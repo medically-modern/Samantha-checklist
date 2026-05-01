@@ -138,16 +138,32 @@ const SUPPLY_HCPC_GROUP_BY_PAYER: Record<PrimaryInsurance, "A" | "B" | "C"> = {
 
 // ─────────────────────────────────────────────────────────────────────
 // Supplies → Medicaid routing override (PRD §9.2)
-// If the patient's primary insurance is one of these, the supplies side
-// (infusion sets + cartridges) bills to Medicaid instead — which means
-// the supplies HCPC comes from the Medicaid row of the table above.
+// The supplies side (infusion sets + cartridges) bills to Medicaid when:
+//   - Primary insurance is "Medicaid" (always — patient already has
+//     straight Medicaid as primary; the supplies just stay there).
+//   - Primary insurance is "Fidelis Medicaid" or
+//     "Anthem BCBS Medicaid (JLJ)" AND the patient also carries
+//     "NY Medicaid" as secondary insurance. (For these managed-Medicaid
+//     primaries, supplies route to NY Medicaid only if the patient is
+//     dually enrolled.)
+// In every other case the supplies bill to the patient's primary.
 // ─────────────────────────────────────────────────────────────────────
 
-const SUPPLIES_ROUTE_TO_MEDICAID = new Set<PrimaryInsurance>([
+const SUPPLIES_NEED_NY_MEDICAID_SECONDARY = new Set<PrimaryInsurance>([
   "Fidelis Medicaid",
   "Anthem BCBS Medicaid (JLJ)",
-  "Medicaid",
 ]);
+
+function suppliesRouteToMedicaid(
+  primary: PrimaryInsurance,
+  secondary: string | null | undefined,
+): boolean {
+  if (primary === "Medicaid") return true;
+  if (SUPPLIES_NEED_NY_MEDICAID_SECONDARY.has(primary)) {
+    return (secondary ?? "").trim().toLowerCase() === "ny medicaid";
+  }
+  return false;
+}
 
 // ─────────────────────────────────────────────────────────────────────
 // Serving → active products (PRD §10)
@@ -167,18 +183,25 @@ const SERVING_PRODUCTS: Record<Serving, ProductId[]> = {
 
 /**
  * Resolve the active products and their HCPC codes for a patient.
- * Returns [] if either input is empty/unknown.
+ * Returns [] if either required input is empty/unknown. Secondary
+ * insurance is optional — it only affects the supplies → Medicaid
+ * routing for Fidelis Medicaid / Anthem BCBS Medicaid (JLJ) primaries
+ * (those route to Medicaid only when secondary is "NY Medicaid").
  */
 export function resolveHcpcs(
   primaryInsurance: PrimaryInsurance | "" | null | undefined,
   serving: Serving | "" | null | undefined,
+  secondaryInsurance?: string | null,
 ): ResolvedProduct[] {
   if (!primaryInsurance || !serving) return [];
 
   const products = SERVING_PRODUCTS[serving as Serving];
   if (!products) return [];
 
-  const suppliesToMedicaid = SUPPLIES_ROUTE_TO_MEDICAID.has(primaryInsurance as PrimaryInsurance);
+  const suppliesToMedicaid = suppliesRouteToMedicaid(
+    primaryInsurance as PrimaryInsurance,
+    secondaryInsurance,
+  );
   const suppliesPayer: PrimaryInsurance = suppliesToMedicaid
     ? "Medicaid"
     : (primaryInsurance as PrimaryInsurance);

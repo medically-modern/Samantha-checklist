@@ -64,7 +64,7 @@ export async function sendPatientToMonday(p: Patient, context: "benefits" | "sub
   const tasks: WriteTask[] = [];
 
   // ----- Guard: require Serving + Primary Insurance -----
-  const resolved = resolveHcpcs(p.primaryInsurance || null, p.serving || null);
+  const resolved = resolveHcpcs(p.primaryInsurance || null, p.serving || null, p.secondaryInsurance ?? null);
   if (!p.serving || !p.primaryInsurance || resolved.length === 0) {
     throw new Error(
       "Cannot send: Serving and Primary Insurance must both be selected before writing to Monday.",

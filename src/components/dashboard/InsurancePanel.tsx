@@ -57,7 +57,11 @@ export function InsurancePanel({
 
   const serving = patient.serving || "";
   const primaryInsurance = patient.primaryInsurance || "";
-  const resolved: ResolvedProduct[] = resolveHcpcs(primaryInsurance || null, serving || null);
+  const resolved: ResolvedProduct[] = resolveHcpcs(
+    primaryInsurance || null,
+    serving || null,
+    patient.secondaryInsurance ?? null,
+  );
   // Products to render in Samantha's UI — Medicaid-billed supplies are
   // hidden and auto-filled downstream (Auth=Required, SoS=Skip).
   const visibleResolved = resolved.filter((r) => !isAutoFilledMedicaidSupply(r));

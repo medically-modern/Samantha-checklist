@@ -39,7 +39,11 @@ export function AuthOutstandingPanel({ patient, onCodeChange }: Props) {
   const primaryInsurance = patient.primaryInsurance || "";
   const dropdownsReady = !!serving && !!primaryInsurance;
 
-  const resolved: ResolvedProduct[] = resolveHcpcs(primaryInsurance || null, serving || null);
+  const resolved: ResolvedProduct[] = resolveHcpcs(
+    primaryInsurance || null,
+    serving || null,
+    patient.secondaryInsurance ?? null,
+  );
 
   // Hide infusion sets / cartridges that bill to Medicaid — Medicaid handles
   // auth approvals on its own; nothing for the user to track here.
@@ -72,8 +76,8 @@ export function AuthOutstandingPanel({ patient, onCodeChange }: Props) {
 
       {dropdownsReady && (
         <AuthRequirementsMatrix
-          resolved={visibleResolved}
-          hiddenProducts={new Set(resolved.filter(isAutoFilledMedicaidSupply).map((r) => r.product))}
+          resolved={resolved}
+          medicaidProducts={new Set(resolved.filter(isAutoFilledMedicaidSupply).map((r) => r.product))}
           ins={ins}
         />
       )}
@@ -338,15 +342,16 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
 
 function AuthRequirementsMatrix({
   resolved,
-  hiddenProducts,
+  medicaidProducts,
   ins,
 }: {
   resolved: ResolvedProduct[];
-  hiddenProducts: Set<ProductId>;
+  /** Products whose supplies route to Medicaid for this patient.
+   *  Renders an "E-paces DVS" pill alongside the Required status. */
+  medicaidProducts: Set<ProductId>;
   ins: { codes: Partial<Record<ProductCodeId, ProductCodeState>> };
 }) {
-  const ALL: ProductId[] = (["monitor", "sensors", "insulin_pump", "infusion_set", "cartridge"] as ProductId[])
-    .filter((p) => !hiddenProducts.has(p));
+  const ALL: ProductId[] = ["monitor", "sensors", "insulin_pump", "infusion_set", "cartridge"];
   const servedSet = new Set(resolved.map((r) => r.product));
 
   return (
@@ -372,6 +377,7 @@ function AuthRequirementsMatrix({
           const isNotServing = label.toLowerCase() === "not serving";
           const isRequired = label.toLowerCase() === "required";
           const isNoAuth = label.toLowerCase() === "no auth needed";
+          const isMedicaidRouted = medicaidProducts.has(p);
 
           return (
             <div
@@ -389,15 +395,22 @@ function AuthRequirementsMatrix({
                   {isServed && !isNotServing ? "Serving" : "Not Serving"}
                 </p>
               </div>
-              <div
-                className={cn(
-                  "mt-auto h-9 flex items-center px-3 rounded-md border text-sm font-medium bg-muted",
-                  isRequired && "bg-warning/15 border-warning/50 text-warning-foreground",
-                  isNoAuth && "bg-success/10 border-success/40 text-success",
-                  isNotServing && "text-muted-foreground",
+              <div className="mt-auto flex items-center gap-1.5 flex-wrap">
+                <div
+                  className={cn(
+                    "h-9 flex items-center px-3 rounded-md border text-sm font-medium bg-muted",
+                    isRequired && "bg-warning/15 border-warning/50 text-warning-foreground",
+                    isNoAuth && "bg-success/10 border-success/40 text-success",
+                    isNotServing && "text-muted-foreground",
+                  )}
+                >
+                  {label || "—"}
+                </div>
+                {isMedicaidRouted && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/40 whitespace-nowrap">
+                    E-paces DVS
+                  </span>
                 )}
-              >
-                {label || "—"}
               </div>
             </div>
           );
