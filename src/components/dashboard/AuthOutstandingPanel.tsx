@@ -226,19 +226,41 @@ function ProductAuthBlock({ meta, resolved, state, onChange, primaryInsurance }:
           subtitle="Enter approval details"
           tone="waiting"
         >
+          {(() => {
+            const noAuthNeeded = state.authOutstandingResult === "no-auth-needed";
+            return (
           <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
             <div className="sm:col-span-5">
               <FieldLabel>Auth Result</FieldLabel>
               <Select
                 value={state.authOutstandingResult || "__none__"}
-                onValueChange={(v) =>
-                  onChange({ authOutstandingResult: (v === "__none__" ? "" : v) as "auth-valid" | "denied" | "" })
-                }
+                onValueChange={(v) => {
+                  const next = (v === "__none__" ? "" : v) as
+                    | "auth-valid"
+                    | "denied"
+                    | "no-auth-needed"
+                    | "";
+                  // Picking No Auth Needed wipes the per-product auth
+                  // metadata in one shot — there is no auth so the
+                  // ID / dates / units don't apply.
+                  if (next === "no-auth-needed") {
+                    onChange({
+                      authOutstandingResult: next,
+                      authId: "",
+                      authStart: "",
+                      authEnd: "",
+                      authUnits: "",
+                    });
+                  } else {
+                    onChange({ authOutstandingResult: next });
+                  }
+                }}
               >
                 <SelectTrigger className={cn(
                   "mt-1 h-9 font-medium",
                   state.authOutstandingResult === "auth-valid" && "bg-green-50 border-green-400 text-green-700",
                   state.authOutstandingResult === "denied" && "bg-red-50 border-red-400 text-red-700",
+                  state.authOutstandingResult === "no-auth-needed" && "bg-sky-50 border-sky-400 text-sky-700",
                   !state.authOutstandingResult && "bg-background",
                 )}>
                   <SelectValue placeholder="Select result…" />
@@ -247,6 +269,7 @@ function ProductAuthBlock({ meta, resolved, state, onChange, primaryInsurance }:
                   <SelectItem value="__none__">— Select —</SelectItem>
                   <SelectItem value="auth-valid">Auth Valid</SelectItem>
                   <SelectItem value="denied">Denied</SelectItem>
+                  <SelectItem value="no-auth-needed">No Auth Needed</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -255,7 +278,8 @@ function ProductAuthBlock({ meta, resolved, state, onChange, primaryInsurance }:
               <Input
                 value={state.authId ?? ""}
                 onChange={(e) => onChange({ authId: e.target.value })}
-                placeholder="e.g. 123456"
+                placeholder={noAuthNeeded ? "—" : "e.g. 123456"}
+                disabled={noAuthNeeded}
                 className="mt-1 h-9 bg-background font-mono text-sm"
               />
             </div>
@@ -265,6 +289,7 @@ function ProductAuthBlock({ meta, resolved, state, onChange, primaryInsurance }:
                 type="date"
                 value={state.authStart ?? ""}
                 onChange={(e) => onChange({ authStart: e.target.value })}
+                disabled={noAuthNeeded}
                 className="mt-1 h-9 bg-background"
               />
             </div>
@@ -274,6 +299,7 @@ function ProductAuthBlock({ meta, resolved, state, onChange, primaryInsurance }:
                 type="date"
                 value={state.authEnd ?? ""}
                 onChange={(e) => onChange({ authEnd: e.target.value })}
+                disabled={noAuthNeeded}
                 className="mt-1 h-9 bg-background"
               />
             </div>
@@ -285,11 +311,14 @@ function ProductAuthBlock({ meta, resolved, state, onChange, primaryInsurance }:
                 min={0}
                 value={state.authUnits ?? ""}
                 onChange={(e) => onChange({ authUnits: e.target.value })}
-                placeholder="90"
+                placeholder={noAuthNeeded ? "—" : "90"}
+                disabled={noAuthNeeded}
                 className="mt-1 h-9 bg-background"
               />
             </div>
           </div>
+            );
+          })()}
         </StageBlock>
       </div>
     </div>

@@ -324,7 +324,7 @@ export interface ProductCodeState {
   authUnits?: string;
   intakeId?: string; // Carecentrix Portal only
   callFaxNumber?: string; // Phone or fax number used when method is Call/Fax
-  authOutstandingResult?: "auth-valid" | "denied" | "";
+  authOutstandingResult?: "auth-valid" | "denied" | "no-auth-needed" | "";
   /** Original Monday auth result label — populated when reading from auth groups, used for read-only display */
   _mondayAuthLabel?: string;
 }

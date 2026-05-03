@@ -359,7 +359,7 @@ export async function sendPatientToMonday(p: Patient, context: "benefits" | "sub
     }
   }
 
-  // ----- Auth Outstanding: per-product auth result (Auth Valid / Denied) -----
+  // ----- Auth Outstanding: per-product auth result (Auth Valid / Denied / No Auth Needed) -----
   if (context === "authOutstanding") {
     console.log('[mondayWrite] authOutstanding entries:', entries.map(e => ({
       cid: e.cid,
@@ -374,15 +374,44 @@ export async function sendPatientToMonday(p: Patient, context: "benefits" | "sub
       }
       const productId = PRODUCT_CODE_TO_PRODUCT_ID[cid];
       const authColumnId = COL.authResult[productId];
-      const resultIndex = state.authOutstandingResult === "auth-valid"
-        ? AUTH_RESULT_INDEX.authValid
-        : AUTH_RESULT_INDEX.denied;
+      const resultIndex =
+        state.authOutstandingResult === "auth-valid"
+          ? AUTH_RESULT_INDEX.authValid
+          : state.authOutstandingResult === "no-auth-needed"
+            ? AUTH_RESULT_INDEX.noAuthNeeded
+            : AUTH_RESULT_INDEX.denied;
       console.log(`[mondayWrite] WRITING auth result: ${productId} → index ${resultIndex} (col: ${authColumnId})`);
       tasks.push({
         label: `Auth result: ${productId}`,
         columnId: authColumnId,
         fn: () => writeStatusIndex(p.id, authColumnId, resultIndex),
       });
+
+      // No Auth Needed → also blank out the per-product auth detail
+      // columns (Auth ID / Start / End / Units) so they don't keep
+      // stale values from a prior pass.
+      if (state.authOutstandingResult === "no-auth-needed") {
+        tasks.push({
+          label: `Auth ID (clear): ${productId}`,
+          columnId: COL.authId[productId],
+          fn: () => writeText(p.id, COL.authId[productId], ""),
+        });
+        tasks.push({
+          label: `Auth Start (clear): ${productId}`,
+          columnId: COL.authStart[productId],
+          fn: () => writeDate(p.id, COL.authStart[productId], ""),
+        });
+        tasks.push({
+          label: `Auth End (clear): ${productId}`,
+          columnId: COL.authEnd[productId],
+          fn: () => writeDate(p.id, COL.authEnd[productId], ""),
+        });
+        tasks.push({
+          label: `Auth Units (clear): ${productId}`,
+          columnId: COL.authUnits[productId],
+          fn: () => writeNumber(p.id, COL.authUnits[productId], ""),
+        });
+      }
     }
   }
 
