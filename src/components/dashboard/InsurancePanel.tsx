@@ -302,6 +302,23 @@ interface CardProps {
   onChange: (patch: Partial<ProductCodeState>) => void;
 }
 
+/** Same-or-Similar lookback window per product. Pump and CGM Monitor get
+ *  a 4-year lookback (capital DME); everything else is 90 days. */
+const SOS_LOOKBACK_DAYS: Record<string, number> = {
+  "pump": 365 * 4,
+  "cgm-monitor": 365 * 4,
+};
+
+function sosClearBeforeDate(productId: string): { date: string; isLong: boolean } {
+  const days = SOS_LOOKBACK_DAYS[productId] ?? 90;
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+  const mm = String(cutoff.getMonth() + 1).padStart(2, "0");
+  const dd = String(cutoff.getDate()).padStart(2, "0");
+  const yyyy = cutoff.getFullYear();
+  return { date: `${mm}/${dd}/${yyyy}`, isLong: days > 90 };
+}
+
 function CodeCard({ meta, resolved, state, universalDone, onChange }: CardProps) {
   const billsToMedicaid = resolved.billsTo === "medicaid";
   const auth: AuthChoice = state.auth ?? "";
@@ -370,9 +387,20 @@ function CodeCard({ meta, resolved, state, universalDone, onChange }: CardProps)
           </Select>
         </div>
         <div>
-          <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Same or Similar
-          </label>
+          {(() => {
+            const { date, isLong } = sosClearBeforeDate(meta.id);
+            return (
+              <div className="flex items-baseline justify-between gap-2 flex-wrap">
+                <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Same or Similar
+                </label>
+                <span className="text-[10px] text-muted-foreground">
+                  Last bill must be before <span className="font-semibold text-foreground">{date}</span>
+                  <span className="ml-1 text-muted-foreground/80">({isLong ? "4 yr" : "90 day"} lookback)</span>
+                </span>
+              </div>
+            );
+          })()}
           <Select
             value={sos || "__none__"}
             onValueChange={(v) => onChange({ sos: (v === "__none__" ? "" : v) as SosChoice })}
