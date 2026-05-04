@@ -130,6 +130,7 @@ export function mondayItemToPatient(item: MondayItem): Patient {
   const notes = cv(COL.callReferenceNotes)?.text ?? "";
   const memberId1 = cv(COL.memberId1)?.text ?? "";
   const memberId2 = cv(COL.memberId2)?.text ?? "";
+  const diagnosis = cv(COL.diagnosis)?.text ?? "";
   // Secondary Insurance is a status column with labels: "None", "NY Medicaid",
   // "Medicare Supplement". The text comes back as the label string.
   const secondaryInsurance = cv(COL.secondaryInsurance)?.text ?? "";
@@ -229,6 +230,7 @@ export function mondayItemToPatient(item: MondayItem): Patient {
     owner: "Samantha",
     serving,
     primaryInsurance: primary,
+    diagnosis,
     secondaryInsurance,
     memberId1,
     memberId2,

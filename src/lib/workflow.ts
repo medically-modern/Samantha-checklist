@@ -399,6 +399,7 @@ export interface Patient {
   hasMedicaid?: boolean;
   serving?: Serving | "";
   primaryInsurance?: PrimaryInsurance | "";
+  diagnosis?: string;
   /** Secondary insurance label (e.g. "NY Medicaid"). Drives Medicaid routing
    *  for supplies when primary is Fidelis Medicaid or Anthem BCBS Medicaid (JLJ). */
   secondaryInsurance?: string;

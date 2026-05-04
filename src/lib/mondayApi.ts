@@ -18,6 +18,7 @@ export const GROUPS = {
 export const COL = {
   serving: "color_mm1w1cm9",
   primaryInsurance: "color_mm1x157j",
+  diagnosis: "color_mm1wf7rv",
   secondaryInsurance: "color_mm241kqp",
   doctorName: "text_mm1x46et",
   clinicName: "dropdown_mm1xbvas",
@@ -99,6 +100,7 @@ export const COL = {
 export const READ_COLUMN_IDS = [
   COL.serving,
   COL.primaryInsurance,
+  COL.diagnosis,
   COL.secondaryInsurance,
   COL.dob,
   COL.memberId1,

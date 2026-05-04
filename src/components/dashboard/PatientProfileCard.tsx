@@ -1,5 +1,5 @@
 import type { Patient } from "@/lib/workflow";
-import { CalendarDays, IdCard, User, Stethoscope, ShieldCheck } from "lucide-react";
+import { CalendarDays, IdCard, User, Stethoscope, ShieldCheck, Activity } from "lucide-react";
 
 interface Props {
   patient: Patient;
@@ -69,6 +69,11 @@ export function PatientProfileCard({ patient }: Props) {
           icon={<IdCard className="h-4 w-4" />}
           label="Member ID"
           value={patient.memberId1 ?? ""}
+        />
+        <Field
+          icon={<Activity className="h-4 w-4" />}
+          label="Diagnosis"
+          value={patient.diagnosis ?? ""}
         />
         {hasMember2 && (
           <Field
