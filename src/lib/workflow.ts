@@ -406,6 +406,14 @@ export interface Patient {
   memberId1?: string;
   memberId2?: string;
   escalated?: boolean;
+  // Doctor info — surfaced in the collapsible Doctor Info row of the
+  // patient profile across every tab.
+  doctorPhone?: string;
+  doctorNpi?: string;
+  doctorEmail?: string;
+  doctorFax?: string;
+  clinicalsMethod?: string;
+  clinicName?: string;
 }
 
 export function deriveInsuranceOutcome(ins?: InsuranceState, servedCodeIds?: ProductCodeId[]):

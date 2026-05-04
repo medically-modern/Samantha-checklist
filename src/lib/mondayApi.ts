@@ -21,6 +21,11 @@ export const COL = {
   diagnosis: "color_mm1wf7rv",
   secondaryInsurance: "color_mm241kqp",
   doctorName: "text_mm1x46et",
+  doctorPhone: "phone_mm1xz8c0",
+  doctorNpi: "text_mm1x7d91",
+  doctorEmail: "email_mm1x6fq5",
+  doctorFax: "email_mm1xdzcj",
+  clinicalsMethod: "color_mm1xw7y5",
   clinicName: "dropdown_mm1xbvas",
   dob: "text_mm1xvxst",
   memberId1: "text_mm1x2qk2",
@@ -106,6 +111,13 @@ export const READ_COLUMN_IDS = [
   COL.memberId1,
   COL.memberId2,
   COL.callReferenceNotes,
+  COL.doctorName,
+  COL.doctorPhone,
+  COL.doctorNpi,
+  COL.doctorEmail,
+  COL.doctorFax,
+  COL.clinicalsMethod,
+  COL.clinicName,
 ];
 
 /** Extended read columns for auth groups — includes auth results + universal statuses */

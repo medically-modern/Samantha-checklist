@@ -126,6 +126,11 @@ export function mondayItemToPatient(item: MondayItem): Patient {
   const primary = findExact<PrimaryInsurance>(PRIMARY_INSURANCE_OPTIONS, cv(COL.primaryInsurance)?.text) || "";
   const dob = cv(COL.dob)?.text ?? "";
   const doctorName = cv(COL.doctorName)?.text ?? "";
+  const doctorPhone = cv(COL.doctorPhone)?.text ?? "";
+  const doctorNpi = cv(COL.doctorNpi)?.text ?? "";
+  const doctorEmail = cv(COL.doctorEmail)?.text ?? "";
+  const doctorFax = cv(COL.doctorFax)?.text ?? "";
+  const clinicalsMethod = cv(COL.clinicalsMethod)?.text ?? "";
   const clinic = cv(COL.clinicName)?.text ?? "";
   const notes = cv(COL.callReferenceNotes)?.text ?? "";
   const memberId1 = cv(COL.memberId1)?.text ?? "";
@@ -218,6 +223,12 @@ export function mondayItemToPatient(item: MondayItem): Patient {
     payer: primary || "",
     doctorName,
     doctorClinic: clinic,
+    doctorPhone,
+    doctorNpi,
+    doctorEmail,
+    doctorFax,
+    clinicalsMethod,
+    clinicName: clinic,
     contactMethod: "parachute",
     stage: "advanced",
     pillars: { rx: false, records: false, diagnosis: false },
