@@ -182,8 +182,6 @@ function ProductAuthBlock({ meta, resolved, state, onChange, primaryInsurance }:
 
         {/* STEP 1 — Submit Auth (read-only EXCEPT Auth ID) */}
         <StageBlock
-          stepNumber={1}
-          icon={<Send className="h-3.5 w-3.5" />}
           title="Submit Auth"
           subtitle="Read-only — submitted previously"
           tone="active"
@@ -220,8 +218,6 @@ function ProductAuthBlock({ meta, resolved, state, onChange, primaryInsurance }:
 
         {/* STEP 2 — Authorizations Outstanding (fully editable) */}
         <StageBlock
-          stepNumber={2}
-          icon={<Inbox className="h-3.5 w-3.5" />}
           title="Authorizations Outstanding"
           subtitle="Enter approval details"
           tone="waiting"
@@ -326,15 +322,11 @@ function ProductAuthBlock({ meta, resolved, state, onChange, primaryInsurance }:
 }
 
 function StageBlock({
-  stepNumber,
-  icon,
   title,
   subtitle,
   tone = "active",
   children,
 }: {
-  stepNumber: 1 | 2;
-  icon: React.ReactNode;
   title: string;
   subtitle?: string;
   tone?: "active" | "waiting";
@@ -348,14 +340,12 @@ function StageBlock({
         cardBorder: "border-border/60 bg-muted/30",
         cardOuter: "opacity-90",
         headerBg: "bg-muted/40 border-border/60",
-        badgeBg: "bg-muted-foreground/40 text-white border-muted-foreground/40",
         body: "bg-muted/20",
       }
     : {
         cardBorder: "border-[#0F4C5C]/55 ring-2 ring-[#0F4C5C]/20 shadow-elevate",
         cardOuter: "",
         headerBg: "bg-[#0F4C5C]/15 border-[#0F4C5C]/30",
-        badgeBg: "bg-[#0F4C5C] text-white border-[#0F4C5C]",
         body: "bg-background",
       };
 
@@ -368,15 +358,6 @@ function StageBlock({
       )}
     >
       <div className={cn("flex items-center gap-3 px-4 py-3 border-b", palette.headerBg)}>
-        <span
-          className={cn(
-            "h-9 w-9 rounded-full flex items-center justify-center text-base font-bold shrink-0 border-2",
-            palette.badgeBg,
-          )}
-          aria-label={`Step ${stepNumber}`}
-        >
-          {stepNumber}
-        </span>
         <div className="min-w-0 flex-1">
           <h5 className="text-sm font-semibold leading-tight">{title}</h5>
           {subtitle && (
