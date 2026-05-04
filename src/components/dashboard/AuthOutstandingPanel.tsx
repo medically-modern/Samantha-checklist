@@ -340,24 +340,31 @@ function StageBlock({
   tone?: "active" | "waiting";
   children: React.ReactNode;
 }) {
+  // tone === "active"  → Step 1 (read-only reference; dimmed so the eye skips it)
+  // tone === "waiting" → Step 2 (the editable focus area; pops with color + ring)
   const isActive = tone === "active";
   const palette = isActive
     ? {
-        cardBorder: "border-[#7BA89C]/40 shadow-card",
-        headerBg: "bg-[#E8F4F0] border-[#7BA89C]/25",
-        badgeBg: "bg-[#7BA89C] text-white border-[#7BA89C]",
+        cardBorder: "border-border/60 bg-muted/30",
+        cardOuter: "opacity-90",
+        headerBg: "bg-muted/40 border-border/60",
+        badgeBg: "bg-muted-foreground/40 text-white border-muted-foreground/40",
+        body: "bg-muted/20",
       }
     : {
-        cardBorder: "border-[#0F4C5C]/35 shadow-card",
-        headerBg: "bg-[#0F4C5C]/10 border-[#0F4C5C]/20",
+        cardBorder: "border-[#0F4C5C]/55 ring-2 ring-[#0F4C5C]/20 shadow-elevate",
+        cardOuter: "",
+        headerBg: "bg-[#0F4C5C]/15 border-[#0F4C5C]/30",
         badgeBg: "bg-[#0F4C5C] text-white border-[#0F4C5C]",
+        body: "bg-background",
       };
 
   return (
     <div
       className={cn(
-        "rounded-lg border bg-background overflow-hidden flex flex-col",
+        "rounded-lg border overflow-hidden flex flex-col",
         palette.cardBorder,
+        palette.cardOuter,
       )}
     >
       <div className={cn("flex items-center gap-3 px-4 py-3 border-b", palette.headerBg)}>
@@ -377,7 +384,7 @@ function StageBlock({
           )}
         </div>
       </div>
-      <div className="p-4 flex-1">{children}</div>
+      <div className={cn("p-4 flex-1", palette.body)}>{children}</div>
     </div>
   );
 }
@@ -427,6 +434,7 @@ function AuthRequirementsMatrix({
           const isNotServing = label.toLowerCase() === "not serving";
           const isRequired = label.toLowerCase() === "required";
           const isNoAuth = label.toLowerCase() === "no auth needed";
+          const isSubmitted = label.toLowerCase() === "submitted";
           const isMedicaidRouted = medicaidProducts.has(p);
 
           return (
@@ -436,6 +444,7 @@ function AuthRequirementsMatrix({
                 "rounded-lg border p-3 bg-background flex flex-col gap-2",
                 isNotServing && "opacity-60",
                 isRequired && "border-warning/50 bg-warning/5",
+                isSubmitted && "border-emerald-300/60 bg-emerald-50/50",
                 isNoAuth && "border-success/40 bg-success/5",
               )}
             >
@@ -463,6 +472,7 @@ function AuthRequirementsMatrix({
                   className={cn(
                     "h-9 flex items-center px-3 rounded-md border text-sm font-medium bg-muted",
                     isRequired && "bg-warning/15 border-warning/50 text-warning-foreground",
+                    isSubmitted && "bg-emerald-100 border-emerald-300 text-emerald-800",
                     isNoAuth && "bg-success/10 border-success/40 text-success",
                     isNotServing && "text-muted-foreground",
                   )}
