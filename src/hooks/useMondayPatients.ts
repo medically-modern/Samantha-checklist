@@ -1,7 +1,42 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Patient } from "@/lib/workflow";
+import type { Patient, ProductCodeId, ProductCodeState } from "@/lib/workflow";
 import { fetchGroupItems, GROUPS, hasToken } from "@/lib/mondayApi";
 import { mondayItemToPatient } from "@/lib/mondayMapping";
+
+/**
+ * Apply the local-edit overlay on top of a freshly-fetched patient.
+ *
+ * IMPORTANT: insurance.codes must be deep-merged per code id, NOT shallow-replaced.
+ * The user's overlay holds fields they edited (auth, sos), but the fresh fetch from
+ * an auth-group fetch ALSO carries Monday-only readback fields like _mondayAuthLabel,
+ * methods, dates. A naive `{ ...p, ...overlay }` clobbers those Monday fields when
+ * the user switches from Benefits → Submit Auth (the overlay was built without them).
+ */
+function applyOverlay(p: Patient, o: Partial<Patient> | undefined): Patient {
+  if (!o) return p;
+  const merged: Patient = { ...p, ...o };
+  if (o.insurance && p.insurance) {
+    const fromMondayCodes = p.insurance.codes ?? {};
+    const fromOverlayCodes = o.insurance.codes ?? {};
+    const codeKeys = new Set<ProductCodeId>([
+      ...(Object.keys(fromMondayCodes) as ProductCodeId[]),
+      ...(Object.keys(fromOverlayCodes) as ProductCodeId[]),
+    ]);
+    const codes: Partial<Record<ProductCodeId, ProductCodeState>> = {};
+    for (const k of codeKeys) {
+      codes[k] = {
+        ...(fromMondayCodes[k] ?? { status: "pending" }),
+        ...(fromOverlayCodes[k] ?? {}),
+      } as ProductCodeState;
+    }
+    merged.insurance = {
+      ...p.insurance,
+      ...o.insurance,
+      codes,
+    };
+  }
+  return merged;
+}
 
 const POLL_MS = 30_000;
 
@@ -34,10 +69,7 @@ export function useMondayPatients(activeGroup: SidebarGroup = "benefits") {
       if (!mountedRef.current) return;
       const safeItems = Array.isArray(items) ? items : [];
       const ps = safeItems.map(mondayItemToPatient);
-      const merged = ps.map((p) => {
-        const o = overlayRef.current.get(p.id);
-        return o ? { ...p, ...o } : p;
-      });
+      const merged = ps.map((p) => applyOverlay(p, overlayRef.current.get(p.id)));
       setPatients(merged);
     } catch (e) {
       if (mountedRef.current)
